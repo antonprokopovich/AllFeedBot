@@ -4,7 +4,7 @@ from telegram.ext import Updater, CommandHandler, ConversationHandler
 from telegram import User, ReplyKeyboardMarkup
 
 
-bot_token = "781241991:AAF8n_sfMKiyNlXJ329-D2nRdrTwOURS6GE"
+bot_token = "659031484:AAEj3rbis6g8AS5BLelinvbxIwqiaDFyV28"
 #channel_name = ""
 all_networks = ["VK", "YouTube", "Twitter"]
 
@@ -32,7 +32,7 @@ def bot_help(bot, update):
     "/del – удалить социальную сеть.",
     ]
 
-    bot.message.reply_text = "\n".join(commands)
+    update.message.reply_text("\n".join(commands))
 
 @quiet_exec
 def bot_add_network(bot, update):
@@ -49,7 +49,7 @@ def bot_add_network(bot, update):
         msg = "Выберите сеть для добавления:\n"
         markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
 
-    bot.message.reply_text(msg, reply_markup = markup)
+    update.message.reply_text(msg, reply_markup = markup)
 
     return adding()
 
@@ -67,8 +67,8 @@ def adding(bot, update):
 
 if __name__ == "__main__":
     updater = Updater(bot_token)
-    updater.dispatcher.add_handler(CommandHandler("/help", bot_help))
-    updater.dispatcher.add_handler(CommandHandler("/add", bot_add_network))
+    updater.dispatcher.add_handler(CommandHandler("help", bot_help))
+    updater.dispatcher.add_handler(CommandHandler("add", bot_add_network))
 
 
     updater.start_polling()
