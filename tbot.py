@@ -53,16 +53,18 @@ def bot_add_network(bot, update):
 
     return adding()
 
-#def bot_del_network(bot, update):
-
-@quiet_exec
 def adding(bot, update):
     chosen_network = update.message.text
     user_networks[user_id].append(chosen_network)
     msg = "Сеть {} добавлена в вашу рассылку.".format(chosen_network)
     bot.message.reply_text(msg)
 
-#def deliting(bot, update):
+
+def deleting(bot, update):
+    chosen_network = update.message.text
+    user_networks[user_id].remove(chosen_network)
+    msg = "Сеть {} удалена из вашей рассылки".format(chosen_network)
+    bot.message.reply_text(msg)
 
 
 if __name__ == "__main__":
