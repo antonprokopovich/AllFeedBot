@@ -4,7 +4,7 @@ from telegram.ext import Updater, CommandHandler, ConversationHandler
 from telegram import User, ReplyKeyboardMarkup
 
 
-bot_token = "659031484:AAEj3rbis6g8AS5BLelinvbxIwqiaDFyV28"
+bot_token = "623743980:AAG6rmOX9Y47Z3N1qlJ-1scURtVDmMPFWog"
 #channel_name = ""
 all_networks = ["VK", "YouTube", "Twitter"]
 
