@@ -1,6 +1,6 @@
 import traceback
 
-from telegram.ext import Updater, CommandHandler, ConversationHandler
+from telegram.ext import Updater, CommandHandler, ConversationHandler, MessageHandler, Filters
 from telegram import User, ReplyKeyboardMarkup
 
 bot_token = "781241991:AAF8n_sfMKiyNlXJ329-D2nRdrTwOURS6GE"
@@ -42,8 +42,12 @@ def bot_help(bot, update):
 
     update.message.reply_text("\n".join(commands))
 
+adding = False
 @quiet_exec
 def bot_add_network(bot, update):
+    global adding
+    adding = True
+
     global chat_id
     chat_id = update.message.chat.id
     networks_to_add = [
@@ -57,7 +61,6 @@ def bot_add_network(bot, update):
         msg = "Выберите сеть для добавления:\n"
         markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
     update.message.reply_text(msg, reply_markup=markup)
-    return adding()
 
 @quiet_exec
 def bot_del_network(bot, update):
@@ -71,21 +74,21 @@ def bot_del_network(bot, update):
         msg = "Выберите сеть для удаления:\n"
         markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
     update.message.reply_text(msg, reply_markup=markup)
-    return deleting()
 
 @quiet_exec
-def adding_network(bot, update):
-    chosen_network = update.message.text
-    user_networks[user_id].append(chosen_network)
-    msg = "Сеть {} добавлена в вашу рассылку.".format(chosen_network)
-    bot.message.reply_text(msg)
-
-@quiet_exec
-def deleting_network(bot, update):
-    chosen_network = update.message.text
-    user_networks[user_id].remove(chosen_network)
-    msg = "Сеть {} удалена из вашей рассылки".format(chosen_network)
-    bot.message.reply_text(msg)
+def choice_handling(bot, update):
+    global adding
+    if adding:
+        chosen_network = update.message.text
+        user_networks[chat_id].append(chosen_network)
+        msg = "Сеть {} добавлена в вашу рассылку.".format(chosen_network)
+        adding = False
+        bot.message.reply_text(msg)
+    else:
+        chosen_network = update.message.text
+        user_networks[chat_id].remove(chosen_network)
+        msg = "Сеть {} удалена из вашей рассылки".format(chosen_network)
+        bot.message.reply_text(msg)
 
 
 if __name__ == "__main__":
@@ -94,6 +97,7 @@ if __name__ == "__main__":
     updater.dispatcher.add_handler(CommandHandler("help", bot_help))
     updater.dispatcher.add_handler(CommandHandler("add", bot_add_network))
     updater.dispatcher.add_handler(CommandHandler("del", bot_del_network))
+    updater.dispatcher.add_handler(MessageHandler(Filters.text, choice_handling))
 
 
     updater.start_polling()

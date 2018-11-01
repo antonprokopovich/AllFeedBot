@@ -6,12 +6,13 @@
 import requests
 import sqlite3
 
-bd_connection = sqlite3.connect('bot_db.db')
+conn = sqlite3.connect('bot_db.db')
+cur = connection.cursor()
 
 vk_token = "a56dcc9cfab85e55830115734f36b6f56686bc685658a9dceba0c3d677423bd702b73b61fc240b78ee404"
 vk_url = "https://api.vk.com/method/newsfeed.get?filters=post,photo&v=4.0&access_token={}".format(vk_token)
 
-"""
+
 def vk_grabber():
     last_post_date = ''
     feed = requests.get(vk_url)
@@ -24,8 +25,10 @@ def vk_grabber():
         if post['date'] < last_post_date:
             title = post['text']
             if post.get('attachments') is not None:
+                body = []
+                
 
-"""
+
     
-
+# cur.execute("insers into posts values (id, title, body")
 
