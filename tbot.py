@@ -3,7 +3,7 @@ import traceback
 from telegram.ext import Updater, CommandHandler, ConversationHandler
 from telegram import User, ReplyKeyboardMarkup
 
-bot_token = "623743980:AAG6rmOX9Y47Z3N1qlJ-1scURtVDmMPFWog"
+bot_token = "781241991:AAF8n_sfMKiyNlXJ329-D2nRdrTwOURS6GE"
 #channel_name = ""
 all_networks = ["VK", "YouTube", "Twitter"]
 
@@ -22,6 +22,15 @@ def quiet_exec(f):
             print(e)
     return wrapper
 
+@quiet_exec 
+def bot_start(bot, update):
+    fname = update.message.from_user.first_name
+    if not fname:
+        fname = update.message.from_user.username
+    msg = "Приветствую, {}!".format(fname)
+    msg += "\nДля получения справки воспользуйтесь командой /help"
+
+    update.message.reply_text(msg)
 
 @quiet_exec   
 def bot_help(bot, update):
@@ -50,7 +59,7 @@ def bot_add_network(bot, update):
     update.message.reply_text(msg, reply_markup=markup)
     return adding()
 
-
+@quiet_exec
 def bot_del_network(bot, update):
     global chat_id
     chat_id = update.message.chat.id
@@ -64,14 +73,15 @@ def bot_del_network(bot, update):
     update.message.reply_text(msg, reply_markup=markup)
     return deleting()
 
-def adding(bot, update):
+@quiet_exec
+def adding_network(bot, update):
     chosen_network = update.message.text
     user_networks[user_id].append(chosen_network)
     msg = "Сеть {} добавлена в вашу рассылку.".format(chosen_network)
     bot.message.reply_text(msg)
 
-
-def deleting(bot, update):
+@quiet_exec
+def deleting_network(bot, update):
     chosen_network = update.message.text
     user_networks[user_id].remove(chosen_network)
     msg = "Сеть {} удалена из вашей рассылки".format(chosen_network)
@@ -80,8 +90,10 @@ def deleting(bot, update):
 
 if __name__ == "__main__":
     updater = Updater(bot_token)
+
     updater.dispatcher.add_handler(CommandHandler("help", bot_help))
     updater.dispatcher.add_handler(CommandHandler("add", bot_add_network))
+    updater.dispatcher.add_handler(CommandHandler("del", bot_del_network))
 
 
     updater.start_polling()
