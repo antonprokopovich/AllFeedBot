@@ -3,13 +3,12 @@ import traceback
 from telegram.ext import Updater, CommandHandler, ConversationHandler
 from telegram import User, ReplyKeyboardMarkup
 
-
 bot_token = "623743980:AAG6rmOX9Y47Z3N1qlJ-1scURtVDmMPFWog"
 #channel_name = ""
 all_networks = ["VK", "YouTube", "Twitter"]
 
-user_id = None
-user_networks = {user_id:[]}
+chat_id = None
+user_networks = {chat_id:[]}
 
 
 def quiet_exec(f):
@@ -36,8 +35,8 @@ def bot_help(bot, update):
 
 @quiet_exec
 def bot_add_network(bot, update):
-    global user_id
-    user_id = update.message.from_user.id
+    global chat_id
+    chat_id = update.message.chat.id
     networks_to_add = [
     nw for nw in all_networks if nw not in user_networks.keys()
     ]
@@ -48,10 +47,22 @@ def bot_add_network(bot, update):
         reply_keyboard = [networks_to_add]
         msg = "Выберите сеть для добавления:\n"
         markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
-
-    update.message.reply_text(msg, reply_markup = markup)
-
+    update.message.reply_text(msg, reply_markup=markup)
     return adding()
+
+
+def bot_del_network(bot, update):
+    global chat_id
+    chat_id = update.message.chat.id
+    if user_networks[chat_id] == []:
+        msg = "Список рассылок пуст."
+        markup = None
+    else:
+        reply_keyboard = [[user_networks[chat_id]]]
+        msg = "Выберите сеть для удаления:\n"
+        markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
+    update.message.reply_text(msg, reply_markup=markup)
+    return deleting()
 
 def adding(bot, update):
     chosen_network = update.message.text

@@ -4,18 +4,28 @@
 строку таблицы 'Posts' нашей базы данных.
 """
 import requests
+import sqlite3
+
+bd_connection = sqlite3.connect('bot_db.db')
 
 vk_token = "a56dcc9cfab85e55830115734f36b6f56686bc685658a9dceba0c3d677423bd702b73b61fc240b78ee404"
 vk_url = "https://api.vk.com/method/newsfeed.get?filters=post,photo&v=4.0&access_token={}".format(vk_token)
 
-
+"""
 def vk_grabber():
+    last_post_date = ''
     feed = requests.get(vk_url)
     feed_json = feed.json()
 
     posts = feed_json['response']['items']
-    print(posts[0])
+    #print(posts[0])
 
+    for post in posts:
+        if post['date'] < last_post_date:
+            title = post['text']
+            if post.get('attachments') is not None:
+
+"""
     
-vk_grabber()
+
 
