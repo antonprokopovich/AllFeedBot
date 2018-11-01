@@ -24,6 +24,9 @@ def quiet_exec(f):
 
 @quiet_exec 
 def bot_start(bot, update):
+    global chat_id
+    chat_id = update.message.chat.id
+
     fname = update.message.from_user.first_name
     if not fname:
         fname = update.message.from_user.username
@@ -48,8 +51,6 @@ def bot_add_network(bot, update):
     global adding
     adding = True
 
-    global chat_id
-    chat_id = update.message.chat.id
     networks_to_add = [
     nw for nw in all_networks if nw not in user_networks.keys()
     ]
@@ -64,8 +65,7 @@ def bot_add_network(bot, update):
 
 @quiet_exec
 def bot_del_network(bot, update):
-    global chat_id
-    chat_id = update.message.chat.id
+
     if user_networks[chat_id] == []:
         msg = "Список рассылок пуст."
         markup = None
@@ -97,6 +97,7 @@ if __name__ == "__main__":
     updater.dispatcher.add_handler(CommandHandler("help", bot_help))
     updater.dispatcher.add_handler(CommandHandler("add", bot_add_network))
     updater.dispatcher.add_handler(CommandHandler("del", bot_del_network))
+    updater.dispatcher.add_handler(CommandHandler("start", bot_start))
     updater.dispatcher.add_handler(MessageHandler(Filters.text, choice_handling))
 
 
