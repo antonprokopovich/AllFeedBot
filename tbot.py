@@ -3,12 +3,11 @@ import traceback
 from telegram.ext import Updater, CommandHandler, ConversationHandler, MessageHandler, Filters
 from telegram import User, ReplyKeyboardMarkup
 
+
 bot_token = "781241991:AAF8n_sfMKiyNlXJ329-D2nRdrTwOURS6GE"
-#channel_name = ""
 all_networks = ["VK", "YouTube", "Twitter"]
 
-chat_id = None
-user_networks = {chat_id:[]}
+user_networks = []
 
 
 def quiet_exec(f):
@@ -52,7 +51,7 @@ def bot_add_network(bot, update):
     adding = True
 
     networks_to_add = [
-    nw for nw in all_networks if nw not in user_networks.keys()
+    nw for nw in all_networks if nw not in user_networks
     ]
     if networks_to_add == []:
         msg = "Все доступные сети уже были добавлены."
@@ -66,11 +65,11 @@ def bot_add_network(bot, update):
 @quiet_exec
 def bot_del_network(bot, update):
 
-    if user_networks[chat_id] == []:
+    if user_networks == []:
         msg = "Список рассылок пуст."
         markup = None
     else:
-        reply_keyboard = [[user_networks[chat_id]]]
+        reply_keyboard = [[user_networks]]
         msg = "Выберите сеть для удаления:\n"
         markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
     update.message.reply_text(msg, reply_markup=markup)
@@ -80,15 +79,15 @@ def choice_handling(bot, update):
     global adding
     if adding:
         chosen_network = update.message.text
-        user_networks[chat_id].append(chosen_network)
+        user_networks.append(chosen_network)
         msg = "Сеть {} добавлена в вашу рассылку.".format(chosen_network)
         adding = False
-        bot.message.reply_text(msg)
+        update.message.reply_text(msg)
     else:
         chosen_network = update.message.text
-        user_networks[chat_id].remove(chosen_network)
+        user_networks.remove(chosen_network)
         msg = "Сеть {} удалена из вашей рассылки".format(chosen_network)
-        bot.message.reply_text(msg)
+        update.message.reply_text(msg)
 
 
 if __name__ == "__main__":
