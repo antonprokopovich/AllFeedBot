@@ -56,6 +56,7 @@ def bot_add_network(bot, update):
     if networks_to_add == []:
         msg = "Все доступные сети уже были добавлены."
         markup = None
+        #adding =False
     else:
         reply_keyboard = [networks_to_add]
         msg = "Выберите сеть для добавления:\n"
@@ -64,12 +65,14 @@ def bot_add_network(bot, update):
 
 @quiet_exec
 def bot_del_network(bot, update):
+    global adding
+    adding = False
 
     if user_networks == []:
         msg = "Список рассылок пуст."
         markup = None
     else:
-        reply_keyboard = [[user_networks]]
+        reply_keyboard = [user_networks]
         msg = "Выберите сеть для удаления:\n"
         markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
     update.message.reply_text(msg, reply_markup=markup)
