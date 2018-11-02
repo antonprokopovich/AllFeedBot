@@ -3,10 +3,14 @@ import traceback
 from telegram.ext import Updater, CommandHandler, ConversationHandler, MessageHandler, Filters
 from telegram import User, ReplyKeyboardMarkup
 
+import sqlite3
+
+connection = sqlite3.connect('bot_db.db')
+cur = connection.cursor()
 
 bot_token = "781241991:AAF8n_sfMKiyNlXJ329-D2nRdrTwOURS6GE"
-all_networks = ["VK", "YouTube", "Twitter"]
 
+all_networks = ["VK", "YouTube", "Twitter"]
 user_networks = []
 
 
@@ -107,6 +111,10 @@ if __name__ == "__main__":
 
     updater.start_polling()
     updater.idle()
+
+    
+
+
 
 
 
