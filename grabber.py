@@ -10,12 +10,15 @@ import sqlite3
 conn = sqlite3.connect('bot_db.db')
 cur = conn.cursor()
 
-vk_token = "a56dcc9cfab85e55830115734f36b6f56686bc685658a9dceba0c3d677423bd702b73b61fc240b78ee404"
-vk_url = "https://api.vk.com/method/newsfeed.get?filters=post,photo&v=4.0&access_token={}".format(vk_token)
+# Дату последнего поста занесенного в базу данных. Далее по ней будем
+# определять до какого поста идут новые, а после какого старые (уже 
+# занесенные в базу данных).
+last_post_date = cur.execute('')
 
+vk_token = "a56dcc9cfab85e55830115734f36b6f56686bc685658a9dceba0c3d677423bd702b73b61fc240b78ee404"
+vk_url = "https://api.vk.com/method/newsfeed.get?start_time={}filters=post,photo&v=4.0&access_token={}".format(vk_token)
 
 def vk_grabber():
-    last_post_date = ''
     r = requests.get(vk_url)
     data = r.json()
 
@@ -29,4 +32,11 @@ def vk_grabber():
 
         #print("TEXT: {}\nVK_LINK: {}\n------------------------------".format(text, vk_link))
  
-# cur.execute("insers into posts values (id, title, body")
+    #cur.execute("insert into posts values (id, date, body, link")
+
+
+youtube_token = "AIzaSyDu4VUNm9MQFigi8dgNZdb2nBIEvooYe-g"
+youtube_url = ""
+
+vk_grabber()
+   

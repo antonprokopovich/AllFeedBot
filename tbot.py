@@ -56,7 +56,7 @@ def bot_add_network(bot, update):
     if networks_to_add == []:
         msg = "Все доступные сети уже были добавлены."
         markup = None
-        #adding =False
+        adding =False
     else:
         reply_keyboard = [networks_to_add]
         msg = "Выберите сеть для добавления:\n"
@@ -84,12 +84,14 @@ def choice_handling(bot, update):
         chosen_network = update.message.text
         user_networks.append(chosen_network)
         msg = "Сеть {} добавлена в вашу рассылку.".format(chosen_network)
+        msg += "\nДля добавления других сетей повторно воспользуйтесь командой /add"
         adding = False
         update.message.reply_text(msg)
     else:
         chosen_network = update.message.text
         user_networks.remove(chosen_network)
         msg = "Сеть {} удалена из вашей рассылки".format(chosen_network)
+        msg += "\nДля удаления других сетей повторно воспользуйтесь командой /del"
         update.message.reply_text(msg)
 
 
