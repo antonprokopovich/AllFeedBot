@@ -13,7 +13,7 @@ cur = conn.cursor()
 # Дату последнего поста занесенного в базу данных. Далее по ней будем
 # определять до какого поста идут новые, а после какого старые (уже 
 # занесенные в базу данных).
-last_post_date = cur.execute('')
+last_post_date = cur.execute('select date from posts order by date desc limit 1')
 
 vk_token = "a56dcc9cfab85e55830115734f36b6f56686bc685658a9dceba0c3d677423bd702b73b61fc240b78ee404"
 vk_url = "https://api.vk.com/method/newsfeed.get?start_time={}filters=post,photo&v=4.0&access_token={}".format(vk_token)
