@@ -17,11 +17,13 @@ bot = Bot(bot_token)
 connection = sqlite3.connect('bot_db.db', check_same_thread=False)
 cursor = connection.cursor()
 
-# Словарь json-формата который будем добавлять в БД в таблицу
-# users колонку networks в виде {'nw_1':{'subscribed':True, 'last_checked': 001},}
+# Словарь, который будем преобразовывать в json-формат (строку)
+# и добавлять в БД в таблицу users колонку networks в виде 
+# {'network_1':{'subscribed':True, 'last_checked': 001}, 'network_2':{'subscribed':False, 'last_checked': 002}}
 db_user_networks = {}
 # Позже записать названия других сетей в список.
 all_networks = ["VK"]
+# Список сетей для создания кастомной клавиатуры.
 user_networks = []
 
 
@@ -69,7 +71,7 @@ adding = False
 def bot_add_network(bot, update):
     global adding
     adding = True
-    # ??? сделать глобальной
+
     global user_networks 
     user_networks = [nw for nw in db_user_networks.keys()]
 
@@ -88,7 +90,7 @@ def bot_add_network(bot, update):
 def bot_del_network(bot, update):
     global adding
     adding = False
-    # ??? сделать глобальной
+    # ??? повторение
     global user_networks 
     user_networks = [nw for nw in db_user_networks.keys()]
 
@@ -117,6 +119,9 @@ def choice_handling(bot, update):
         msg = "Сеть {} удалена из вашей рассылки".format(chosen_network)
         msg += "\nДля удаления других сетей, повторно воспользуйтесь командой /del"
         update.message.reply_text(msg)
+
+    cursor.execute('insert into users (networks) values (?)', [str(db_user_networks)])
+    connection.commit()
 
 
 if __name__ == "__main__":
