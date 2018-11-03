@@ -13,6 +13,7 @@ from dbchecker import start_checker
 bot_token = "781241991:AAF8n_sfMKiyNlXJ329-D2nRdrTwOURS6GE"
 bot = Bot(bot_token)
 
+#
 connection = sqlite3.connect('bot_db.db', check_same_thread=False)
 cursor = connection.cursor()
 
@@ -32,9 +33,10 @@ def quiet_exec(f):
 
 @quiet_exec 
 def bot_start(bot, update):
-    #global user_id
     user_id = update.message.chat.id
-    print(user_id)
+    # Временно зададим единый канал для всех пользователей.
+    # Вместо id канала используем @channelusername.
+    channel_id = "@Channel_1"
 
     fname = update.message.from_user.first_name
     if not fname:
@@ -44,7 +46,7 @@ def bot_start(bot, update):
 
     update.message.reply_text(msg)
     # При старте работы с ботом заносим id юзера в БД
-    cursor.execute('insert into users(user_id) values (?)', [user_id])
+    cursor.execute('insert or replace into users(user_id, channel_id) values (?, ?)', [user_id, channel_id])
     connection.commit()
 
 @quiet_exec   
