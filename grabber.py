@@ -37,10 +37,11 @@ def vk_grabber():
         cur.execute("insert into posts values (NULL, ?, ?, ?, ?)", [text, vk_link, timestamp, network])
     connection.commit()
 
-vk_grabber()
+#vk_grabber()
 
 youtube_token = "AIzaSyDu4VUNm9MQFigi8dgNZdb2nBIEvooYe-g"
 youtube_url = ""
 
-
+def youtube_grabber():
+    
    
