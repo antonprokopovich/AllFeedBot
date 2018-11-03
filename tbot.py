@@ -10,11 +10,11 @@ import sqlite3
 
 from dbchecker import start_checker
 
-connection = sqlite3.connect('bot_db.db')
-cursor = connection.cursor()
-
 bot_token = "781241991:AAF8n_sfMKiyNlXJ329-D2nRdrTwOURS6GE"
 bot = Bot(bot_token)
+
+connection = sqlite3.connect('bot_db.db', check_same_thread=False)
+cursor = connection.cursor()
 
 all_networks = ["VK", "YouTube", "Twitter"]
 user_networks = []
