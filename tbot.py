@@ -13,12 +13,17 @@ from dbchecker import start_checker
 bot_token = "781241991:AAF8n_sfMKiyNlXJ329-D2nRdrTwOURS6GE"
 bot = Bot(bot_token)
 
-#
+
 connection = sqlite3.connect('bot_db.db', check_same_thread=False)
 cursor = connection.cursor()
 
-all_networks = ["VK", "YouTube", "Twitter"]
+# Словарь json-формата который будем добавлять в БД в таблицу
+# users колонку networks в виде {'nw_1':{'subscribed':True, 'last_checked': 001},}
+db_user_networks = {}
+# Позже записать названия других сетей в список.
+all_networks = ["VK"]
 user_networks = []
+
 
 def quiet_exec(f):
     def wrapper(*args, **kw):
@@ -64,6 +69,9 @@ adding = False
 def bot_add_network(bot, update):
     global adding
     adding = True
+    # ??? сделать глобальной
+    global user_networks 
+    user_networks = [nw for nw in db_user_networks.keys()]
 
     networks_to_add = [nw for nw in all_networks if nw not in user_networks]
     if networks_to_add == []:
@@ -80,6 +88,9 @@ def bot_add_network(bot, update):
 def bot_del_network(bot, update):
     global adding
     adding = False
+    # ??? сделать глобальной
+    global user_networks 
+    user_networks = [nw for nw in db_user_networks.keys()]
 
     if user_networks == []:
         msg = "Список рассылок пуст."
@@ -95,14 +106,14 @@ def choice_handling(bot, update):
     global adding
     if adding:
         chosen_network = update.message.text
-        user_networks.append(chosen_network)
+        db_user_networks[chosen_network] = True
         msg = "Сеть {} добавлена в вашу рассылку.".format(chosen_network)
         msg += "\nДля добавления других сетей, повторно воспользуйтесь командой /add"
         adding = False
         update.message.reply_text(msg)
     else:
         chosen_network = update.message.text
-        user_networks.remove(chosen_network)
+        db_user_networks[chosen_network] = False
         msg = "Сеть {} удалена из вашей рассылки".format(chosen_network)
         msg += "\nДля удаления других сетей, повторно воспользуйтесь командой /del"
         update.message.reply_text(msg)
