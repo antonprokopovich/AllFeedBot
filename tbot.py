@@ -132,12 +132,11 @@ def choice_handling(bot, update):
         update.message.reply_text(msg)
 
     print(str(db_user_networks))
-    db_user_networks_str = str(db_user_networks)
-    print(db_user_networks_str)    
+  
     # Запрос не записывает новое значение networks в БД.
     # После вызова команды /add юзером и добавления сети VK, значение
     # в колонке networks в таблице users должно стать {'VK': {'subscribed': True, 'last_checked': 0}}
-    cursor.execute('UPDATE users SET networks = ? WHERE user_id = ?', [db_user_networks_str, user_id])
+    cursor.execute('UPDATE users SET networks = ? WHERE user_id = ?', [str(db_user_networks), user_id])
     connection.commit()
 
 
