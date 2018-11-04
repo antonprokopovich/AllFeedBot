@@ -10,15 +10,16 @@ import sqlite3
 connection = sqlite3.connect('bot_db.db')
 cur = connection.cursor()
 
-# Дата последнего поста занесенного в базу данных. Далее по ней будем
+# Дата последнего поста из VK занесенного в базу данных. Далее по ней будем
 # определять до какого поста идут новые, а после какого старые (уже 
 # занесенные в базу данных).
-cur.execute('select timestamp from posts order by timestamp desc limit 1')
-last_timestamp = cur.fetchone()[0]
-print(last_timestamp)
+cur.execute("SELECT timestamp FROM posts WHERE network = 'vk' ORDER BY timestamp DESC LIMIT 1")
+last_timestamp_vk = cur.fetchone()[0]
+#print(last_timestamp)
 
 vk_token = "a56dcc9cfab85e55830115734f36b6f56686bc685658a9dceba0c3d677423bd702b73b61fc240b78ee404"
-vk_url = "https://api.vk.com/method/newsfeed.get?start_time={}&filters=post,photo&v=4.0&access_token={}".format(last_timestamp, vk_token)
+vk_url = ("https://api.vk.com/method/newsfeed.get?start_time={}&filters=post,photo&v=4.0&access_token={}"
+        .format(last_timestamp_vk, vk_token))
 
 def vk_grabber():
     network = 'vk'
@@ -39,9 +40,4 @@ def vk_grabber():
 
 #vk_grabber()
 
-youtube_token = "AIzaSyDu4VUNm9MQFigi8dgNZdb2nBIEvooYe-g"
-youtube_url = ""
-
-def youtube_grabber():
-    
    

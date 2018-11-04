@@ -14,15 +14,16 @@ bot_token = "781241991:AAF8n_sfMKiyNlXJ329-D2nRdrTwOURS6GE"
 bot = Bot(bot_token)
 
 
-connection = sqlite3.connect('bot_db.db', check_same_thread=False)
+connection = sqlite3.connect('bot_db.db', check_same_thread=False, timeout=10)
 cursor = connection.cursor()
 
+user_id = None
+# Позже записать названия других сетей в список.
+all_networks = ["VK"]
 # Словарь, который будем преобразовывать в json-формат (строку)
 # и добавлять в БД в таблицу users колонку networks в виде 
 # {'network_1':{'subscribed':True, 'last_checked': 001}, 'network_2':{'subscribed':False, 'last_checked': 002}}
 db_user_networks = {}
-# Позже записать названия других сетей в список.
-all_networks = ["VK"]
 # Список сетей для создания кастомной клавиатуры.
 user_networks = []
 
@@ -40,6 +41,7 @@ def quiet_exec(f):
 
 @quiet_exec 
 def bot_start(bot, update):
+    global user_id
     user_id = update.message.chat.id
     # Временно зададим единый канал для всех пользователей.
     # Вместо id канала используем @channelusername.
@@ -52,8 +54,9 @@ def bot_start(bot, update):
     msg += "\nДля получения справки воспользуйтесь командой /help"
 
     update.message.reply_text(msg)
-    # При старте работы с ботом заносим id юзера в БД
-    cursor.execute('insert or replace into users(user_id, channel_id) values (?, ?)', [user_id, channel_id])
+    # При старте работы с ботом заносим id юзера и название канала в БД.
+    # IGNORE или REPLACE?
+    cursor.execute('INSERT or IGNORE INTO users (user_id, channel_id) VALUES (?, ?)', [user_id, channel_id])
     connection.commit()
 
 @quiet_exec   
@@ -73,9 +76,13 @@ def bot_add_network(bot, update):
     adding = True
 
     global user_networks 
-    user_networks = [nw for nw in db_user_networks.keys()]
+    user_networks = [
+    network for network, value in db_user_networks.items() if value == True
+    ]
 
-    networks_to_add = [nw for nw in all_networks if nw not in user_networks]
+    networks_to_add = [
+    network for network in all_networks if network not in user_networks
+    ]
     if networks_to_add == []:
         msg = "Все доступные сети уже были добавлены."
         markup = None
@@ -92,7 +99,9 @@ def bot_del_network(bot, update):
     adding = False
     # ??? повторение
     global user_networks 
-    user_networks = [nw for nw in db_user_networks.keys()]
+    user_networks = [
+    network for network, value in db_user_networks.items() if value == True
+    ]
 
     if user_networks == []:
         msg = "Список рассылок пуст."
@@ -105,22 +114,26 @@ def bot_del_network(bot, update):
 
 @quiet_exec
 def choice_handling(bot, update):
+    global db_user_networks
+    global user_id
     global adding
+    chosen_network = update.message.text
+
     if adding:
-        chosen_network = update.message.text
-        db_user_networks[chosen_network] = True
+        db_user_networks[chosen_network] = {'subscribed': True, 'last_checked': 0}
         msg = "Сеть {} добавлена в вашу рассылку.".format(chosen_network)
         msg += "\nДля добавления других сетей, повторно воспользуйтесь командой /add"
         adding = False
         update.message.reply_text(msg)
     else:
-        chosen_network = update.message.text
-        db_user_networks[chosen_network] = False
+        db_user_networks[chosen_network]['subscribed'] = False
         msg = "Сеть {} удалена из вашей рассылки".format(chosen_network)
         msg += "\nДля удаления других сетей, повторно воспользуйтесь командой /del"
         update.message.reply_text(msg)
 
-    cursor.execute('insert into users (networks) values (?)', [str(db_user_networks)])
+    print(str(db_user_networks))    
+
+    cursor.execute('UPDATE users SET networks = ? WHERE user_id = ?', [str(db_user_networks), user_id])
     connection.commit()
 
 
