@@ -77,12 +77,13 @@ def bot_add_network(bot, update):
 
     global user_networks 
     user_networks = [
-    network for network, value in db_user_networks.items() if value == True
+    network for network, value in db_user_networks.items() if value['subscribed'] == True
     ]
-
+    print(user_networks)
     networks_to_add = [
     network for network in all_networks if network not in user_networks
     ]
+    print(networks_to_add)
     if networks_to_add == []:
         msg = "Все доступные сети уже были добавлены."
         markup = None
@@ -100,7 +101,7 @@ def bot_del_network(bot, update):
     # ??? повторение
     global user_networks 
     user_networks = [
-    network for network, value in db_user_networks.items() if value == True
+    network for network, value in db_user_networks.items() if value['subscribed'] == True
     ]
 
     if user_networks == []:
@@ -131,7 +132,7 @@ def choice_handling(bot, update):
         msg += "\nДля удаления других сетей, повторно воспользуйтесь командой /del"
         update.message.reply_text(msg)
 
-    print(str(db_user_networks))    
+    #print(str(db_user_networks))    
 
     cursor.execute('UPDATE users SET networks = ? WHERE user_id = ?', [str(db_user_networks), user_id])
     connection.commit()
