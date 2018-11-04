@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 from _thread import start_new_thread
-
 import traceback
+import sqlite3
 
 from telegram.ext import Updater, CommandHandler, ConversationHandler, MessageHandler, Filters
 from telegram import User, ReplyKeyboardMarkup, Bot
-
-import sqlite3
 
 from dbchecker import start_checker
 
@@ -75,15 +73,16 @@ def bot_add_network(bot, update):
     global adding
     adding = True
 
-    global user_networks 
+    global user_networks
+    # Списки user_networks и networks_to_add являются обратными друг
+    # дгуру: добавляя элемент в одну из них, мы убираем его из дургой,
+    # и наоборот. 
     user_networks = [
     network for network, value in db_user_networks.items() if value['subscribed'] == True
     ]
-    print(user_networks)
     networks_to_add = [
     network for network in all_networks if network not in user_networks
     ]
-    print(networks_to_add)
     if networks_to_add == []:
         msg = "Все доступные сети уже были добавлены."
         markup = None
@@ -132,9 +131,13 @@ def choice_handling(bot, update):
         msg += "\nДля удаления других сетей, повторно воспользуйтесь командой /del"
         update.message.reply_text(msg)
 
-    #print(str(db_user_networks))    
-
-    cursor.execute('UPDATE users SET networks = ? WHERE user_id = ?', [str(db_user_networks), user_id])
+    print(str(db_user_networks))
+    db_user_networks_str = str(db_user_networks)
+    print(db_user_networks_str)    
+    # Запрос не записывает новое значение networks в БД.
+    # После вызова команды /add юзером и добавления сети VK, значение
+    # в колонке networks в таблице users должно стать {'VK': {'subscribed': True, 'last_checked': 0}}
+    cursor.execute('UPDATE users SET networks = ? WHERE user_id = ?', [db_user_networks_str, user_id])
     connection.commit()
 
 
