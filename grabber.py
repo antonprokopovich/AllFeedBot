@@ -3,9 +3,9 @@
 дату каждого нового поста, и добавлять их с соответствующим id в
 строку таблицы 'Posts' нашей базы данных.
 """
-import time
 import requests
 import sqlite3
+import time
 
 connection = sqlite3.connect('bot_db.db')
 cur = connection.cursor()
@@ -22,26 +22,32 @@ vk_url = ("https://api.vk.com/method/newsfeed.get?start_time={}&filters=post,pho
         .format(last_timestamp_vk, vk_token))
 
 def vk_grabber():
-    network = 'vk'
-    r = requests.get(vk_url)
-    data = r.json()
-    #print(data)
-    posts = data['response']['items']
-    for post in posts:
-        timestamp = post.get('date', 0)
-        text = post.get('text', '')
-        source_id = post.get('source_id', 0)
-        post_id = post.get('post_id', 0)
-        vk_link = "https://vk.com/feed?w=wall{}_{}".format(source_id, post_id)
-        #print("TEXT: {}\nVK_LINK: {}\n------------------------------".format(text, vk_link))
+    while True:
+        network_name = 'vk'
+        r = requests.get(vk_url)
+        data = r.json()
+        #print(data)
+        posts = data['response']['items']
+        # Парсим, если есть новые посты (список posts не пуст).
+        if posts != []:
+            for post in posts:
+                timestamp = post.get('date', 0)
+                text = post.get('text', '')
+                source_id = post.get('source_id', 0)
+                post_id = post.get('post_id', 0)
+                vk_link = "https://vk.com/feed?w=wall{}_{}".format(source_id, post_id)
+                #print("TEXT: {}\nVK_LINK: {}\n------------------------------".format(text, vk_link))
 
-        cur.execute("insert into posts values (NULL, ?, ?, ?, ?)", [text, vk_link, timestamp, network])
-    connection.commit()
+                cur.execute("insert into posts values (NULL, ?, ?, ?, ?)", [text, vk_link, timestamp, network_name])
+            connection.commit()
+    # Парсим новые посты из новостной ленты ВК каждую минуту.     
+    time.sleep(60)    
 
+"""
 if __name__=='__main__':
 
     while True:
         vk_grabber()
         time.sleep(60*5)
-
+"""
    

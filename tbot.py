@@ -6,6 +6,10 @@ import sqlite3
 from telegram.ext import Updater, CommandHandler, ConversationHandler, MessageHandler, Filters
 from telegram import User, ReplyKeyboardMarkup, Bot
 
+# Из модуля граббера импортируем функцию граббера для вк.
+from grabber import vk_grabber
+# Из модуля проверки БД на наличие новых постов импортируем
+# основную функцию.
 from dbchecker import start_checker
 
 bot_token = "781241991:AAF8n_sfMKiyNlXJ329-D2nRdrTwOURS6GE"
@@ -56,7 +60,8 @@ def bot_start(bot, update):
     update.message.reply_text(msg)
     # При старте работы с ботом заносим id юзера и название канала в БД.
     # Если пользователь повторно воспользовался командой /start,
-    # и его данные уже есть в таблице - не меняем их. (IGNORE или REPLACE ?)
+    # и его данные уже есть в таблице - не меняем их.
+    # (IGNORE или REPLACE ?)
     cursor.execute('INSERT or IGNORE INTO users (user_id, channel_id) VALUES (?, ?)', [user_id, channel_id])
     connection.commit()
 
@@ -145,8 +150,10 @@ def choice_handling(bot, update):
 
 
 if __name__ == "__main__":
-
+    # В отдельных потоках запускаем чеккер БД и граббер ВК.
+    start_new_thread(vk_grabber)
     start_new_thread(start_checker, (bot,))
+
     updater = Updater(bot_token)
 
     updater.dispatcher.add_handler(CommandHandler("help", bot_help))
@@ -154,7 +161,6 @@ if __name__ == "__main__":
     updater.dispatcher.add_handler(CommandHandler("del", bot_del_network))
     updater.dispatcher.add_handler(CommandHandler("start", bot_start))
     updater.dispatcher.add_handler(MessageHandler(Filters.text, choice_handling))
-
 
     updater.start_polling()
     updater.idle()
