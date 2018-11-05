@@ -3,8 +3,8 @@
 дату каждого нового поста, и добавлять их с соответствующим id в
 строку таблицы 'Posts' нашей базы данных.
 """
+import time
 import requests
-
 import sqlite3
 
 connection = sqlite3.connect('bot_db.db')
@@ -38,6 +38,10 @@ def vk_grabber():
         cur.execute("insert into posts values (NULL, ?, ?, ?, ?)", [text, vk_link, timestamp, network])
     connection.commit()
 
-#vk_grabber()
+if __name__=='__main__':
+
+    while True:
+        vk_grabber()
+        time.sleep(60*5)
 
    

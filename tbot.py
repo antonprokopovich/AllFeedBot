@@ -16,7 +16,7 @@ connection = sqlite3.connect('bot_db.db', check_same_thread=False, timeout=10)
 cursor = connection.cursor()
 
 user_id = None
-# Позже записать названия других сетей в список.
+# Позже добавим названия других сетей в список.
 all_networks = ["VK"]
 # Словарь, который будем преобразовывать в json-формат (строку)
 # и добавлять в БД в таблицу users колонку networks в виде 
@@ -39,6 +39,8 @@ def quiet_exec(f):
 
 @quiet_exec 
 def bot_start(bot, update):
+    # При начале работы с ботом автоматически вызывается команда /start
+    # и пользователю присвается user_id.
     global user_id
     user_id = update.message.chat.id
     # Временно зададим единый канал для всех пользователей.
@@ -53,7 +55,8 @@ def bot_start(bot, update):
 
     update.message.reply_text(msg)
     # При старте работы с ботом заносим id юзера и название канала в БД.
-    # IGNORE или REPLACE?
+    # Если пользователь повторно воспользовался командой /start,
+    # и его данные уже есть в таблице - не меняем их. (IGNORE или REPLACE ?)
     cursor.execute('INSERT or IGNORE INTO users (user_id, channel_id) VALUES (?, ?)', [user_id, channel_id])
     connection.commit()
 
@@ -131,12 +134,13 @@ def choice_handling(bot, update):
         msg += "\nДля удаления других сетей, повторно воспользуйтесь командой /del"
         update.message.reply_text(msg)
 
-    print(str(db_user_networks))
-  
+    #db_user_networks_js = json.dumps(db_user_networks)
+    #print((db_user_networks_js))
+
     # Запрос не записывает новое значение networks в БД.
     # После вызова команды /add юзером и добавления сети VK, значение
     # в колонке networks в таблице users должно стать {'VK': {'subscribed': True, 'last_checked': 0}}
-    cursor.execute('UPDATE users SET networks = ? WHERE user_id = ?', [str(db_user_networks), user_id])
+    cursor.execute('UPDATE users SET networks = ? WHERE user_id = ?', [json.dumps(db_user_networks), user_id])
     connection.commit()
 
 
