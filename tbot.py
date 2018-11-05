@@ -148,10 +148,17 @@ def choice_handling(bot, update):
     cursor.execute('UPDATE users SET networks = ? WHERE user_id = ?', [json.dumps(db_user_networks), user_id])
     connection.commit()
 
+def add_filter(bot, update):
+    pass
+
 
 if __name__ == "__main__":
     # В отдельных потоках запускаем чеккер БД и граббер ВК.
-    start_new_thread(vk_grabber)
+
+    # ??? user_id для записи в таблицу posts БД будет получен только
+    # после вызова юзером команды /start. Как запускать поток с
+    # граббером только ПОСЛЕ вызова /start? .
+    start_new_thread(vk_grabber, (user_id,))
     start_new_thread(start_checker, (bot,))
 
     updater = Updater(bot_token)

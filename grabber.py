@@ -7,7 +7,7 @@ import requests
 import sqlite3
 import time
 
-connection = sqlite3.connect('bot_db.db')
+connection = sqlite3.connect('bot_db.db', check_same_thread=False)
 cur = connection.cursor()
 
 # Дата последнего поста из VK занесенного в базу данных. Далее по ней будем
@@ -21,7 +21,8 @@ vk_token = "a56dcc9cfab85e55830115734f36b6f56686bc685658a9dceba0c3d677423bd702b7
 vk_url = ("https://api.vk.com/method/newsfeed.get?start_time={}&filters=post,photo&v=4.0&access_token={}"
         .format(last_timestamp_vk, vk_token))
 
-def vk_grabber():
+
+def vk_grabber(user_id):
     while True:
         network_name = 'vk'
         r = requests.get(vk_url)
@@ -38,10 +39,10 @@ def vk_grabber():
                 vk_link = "https://vk.com/feed?w=wall{}_{}".format(source_id, post_id)
                 #print("TEXT: {}\nVK_LINK: {}\n------------------------------".format(text, vk_link))
 
-                cur.execute("insert into posts values (NULL, ?, ?, ?, ?)", [text, vk_link, timestamp, network_name])
+                cur.execute("insert into posts values (NULL, ?, ?, ?, ?, ?)", [text, vk_link, timestamp, network_name, user_id])
             connection.commit()
     # Парсим новые посты из новостной ленты ВК каждую минуту.     
-    time.sleep(60)    
+    time.sleep(30*60)    
 
 """
 if __name__=='__main__':
