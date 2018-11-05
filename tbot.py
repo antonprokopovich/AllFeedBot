@@ -45,7 +45,7 @@ def bot_start(bot, update):
     user_id = update.message.chat.id
     # Временно зададим единый канал для всех пользователей.
     # Вместо id канала используем @channelusername.
-    channel_id = "@Channel_1"
+    channel_id = "@feed_channel"
 
     fname = update.message.from_user.first_name
     if not fname:
