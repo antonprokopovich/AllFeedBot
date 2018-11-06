@@ -18,16 +18,18 @@ last_timestamp_vk = cur.fetchone()[0]
 #print(last_timestamp)
 
 vk_token = "a56dcc9cfab85e55830115734f36b6f56686bc685658a9dceba0c3d677423bd702b73b61fc240b78ee404"
+
+# Использоую last_timestamp_vk и vk_token формируем ссылку для
+# http-запроса к VK API для получения данных всех последних постов.
 vk_url = ("https://api.vk.com/method/newsfeed.get?start_time={}&filters=post,photo&v=4.0&access_token={}"
         .format(last_timestamp_vk, vk_token))
 
-
-def vk_grabber(user_id):
+def vk_grabber():
     while True:
         network_name = 'vk'
         r = requests.get(vk_url)
         data = r.json()
-        #print(data)
+        print(data)
         posts = data['response']['items']
         # Парсим, если есть новые посты (список posts не пуст).
         if posts != []:
@@ -39,11 +41,13 @@ def vk_grabber(user_id):
                 vk_link = "https://vk.com/feed?w=wall{}_{}".format(source_id, post_id)
                 #print("TEXT: {}\nVK_LINK: {}\n------------------------------".format(text, vk_link))
 
-                cur.execute("insert into posts values (NULL, ?, ?, ?, ?, ?)", [text, vk_link, timestamp, network_name, user_id])
+                cur.execute("insert into posts values (NULL, ?, ?, ?, ?, ?)", [text, vk_link, timestamp, network_name])
             connection.commit()
     # Парсим новые посты из новостной ленты ВК каждую минуту.     
     time.sleep(30*60)    
 
+
+vk_grabber()
 """
 if __name__=='__main__':
 

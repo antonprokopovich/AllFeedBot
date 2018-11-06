@@ -75,9 +75,15 @@ def bot_help(bot, update):
 
     update.message.reply_text("\n".join(commands))
 
+# Флаг, который будет использоваться для перехода в режим удаления
+# или добавления соц. сетей, чтобы хэндлер choice_handling(),
+# обрабатывающий сообщение с название соц. сети, определял
+# удалять или добавлять его в соответствии текущем режимом.
 adding = False
 @quiet_exec
 def bot_add_network(bot, update):
+    """ Хэндлер обрабатывающий команду /add и предоставляющий
+    пользователю варианты доступных для добавления социальных сетей."""
     global adding
     adding = True
 
@@ -94,7 +100,7 @@ def bot_add_network(bot, update):
     if networks_to_add == []:
         msg = "Все доступные сети уже были добавлены."
         markup = None
-        adding =False
+        adding = False
     else:
         reply_keyboard = [networks_to_add]
         msg = "Выберите сеть для добавления:\n"
@@ -103,6 +109,8 @@ def bot_add_network(bot, update):
 
 @quiet_exec
 def bot_del_network(bot, update):
+    """Хэндлер обрабатывающий команду /del и предоставляющий
+    пользователю варианты доступных для добавления социальных сетей."""
     global adding
     adding = False
     # ??? повторение
@@ -122,6 +130,9 @@ def bot_del_network(bot, update):
 
 @quiet_exec
 def choice_handling(bot, update):
+    """Хэндлер срабатывающий после того, как пользователь выбрал сеть
+    для добавления/удаления и обновляющий список рассылок db_user_networks.
+    """
     global db_user_networks
     global user_id
     global adding
@@ -148,7 +159,8 @@ def choice_handling(bot, update):
     cursor.execute('UPDATE users SET networks = ? WHERE user_id = ?', [json.dumps(db_user_networks), user_id])
     connection.commit()
 
-def add_filter(bot, update):
+def add_filter(bot, update, args):
+
     pass
 
 
@@ -158,7 +170,7 @@ if __name__ == "__main__":
     # ??? user_id для записи в таблицу posts БД будет получен только
     # после вызова юзером команды /start. Как запускать поток с
     # граббером только ПОСЛЕ вызова /start? .
-    start_new_thread(vk_grabber, (user_id,))
+    start_new_thread(vk_grabber, (,))
     start_new_thread(start_checker, (bot,))
 
     updater = Updater(bot_token)
