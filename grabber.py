@@ -46,8 +46,9 @@ def vk_grabber():
     # Парсим новые посты из новостной ленты ВК каждую минуту.     
     time.sleep(30*60)    
 
+#vk_grabber()
 
-vk_grabber()
+
 """
 if __name__=='__main__':
 
