@@ -1,5 +1,4 @@
-# Sample Python code for user authorization
-
+# -*- coding: utf-8 -*-
 import os
 
 import google.oauth2.credentials
@@ -25,13 +24,15 @@ def get_authenticated_service():
     credentials = flow.run_console()
     return build(API_SERVICE_NAME, API_VERSION, credentials = credentials)
 
+# [Весь код выше взял из скрипта из раздела документации YouTube API
+# по работе с OAuth (https://developers.google.com/youtube/v3/quickstart/python)]
 
 def my_subscriptions_ids_list(service, **kwargs):
-"""
-Метод выполняет get запрос к api методу list() ресурса subscriptions(),
-и берет из ответа id каналов, на которые подписан аутентифицированный
-пользователь.
-"""
+    """
+    Метод выполняет get запрос к api методу list() ресурса subscriptions(),
+    и берет из ответа id каналов, на которые подписан аутентифицированный
+    пользователь.
+    """
     results = service.subscriptions().list(
         **kwargs
     ).execute()
@@ -41,9 +42,9 @@ def my_subscriptions_ids_list(service, **kwargs):
 
 
 def channel_uploads_playlist_id(service, **kwargs):
-"""
-Метод возвращает id плейлиста загруженных видео для каждого канала. 
-"""
+    """
+    Метод возвращает id плейлиста загруженных видео для каждого канала. 
+    """
     results = service.channels().list(
         **kwargs
         ).execute()
@@ -51,10 +52,10 @@ def channel_uploads_playlist_id(service, **kwargs):
     return uploads_pl_id
 
 def uploads_playlist_videos_ids_and_dates(service, **kwargs):
-"""
-Метод возвращает id (и таймкод, чтобы сортировать позже) каждого видео
-загруженного на канал.
-"""
+    """
+    Метод возвращает id (и таймкод, чтобы сортировать позже) каждого видео
+    загруженного на канал.
+    """
     results = service.playlistItems().list(
         **kwargs
         ).execute()
@@ -75,17 +76,17 @@ if __name__ == '__main__':
 
     # Получаем список id каналов, на которые подписан пользователь.
     sub_ids_list = my_subscriptions_ids_list(service,
-            part='snippet',
-            mine=True,
-            maxResults=50)
+        part='snippet',
+        mine=True,
+        maxResults=50)
 
     # Получаем список из id плейлистов загрузок каждого канала.
     uploads_pl_ids_list = []
     for sub_id in sub_ids_list:
         uploads_pl_id = channel_uploads_playlist_id(service,
-                part='contentDetails',
-                id=sub_id,
-                maxResults=50)
+        part='contentDetails',
+        id=sub_id,
+        maxResults=50)
     uploads_pl_ids_list.append(uploads_pl_id)
 
     # Получаем список из списков (id и таймкодов) для каждого видео для
@@ -94,10 +95,10 @@ if __name__ == '__main__':
     subs_videos_ids_and_dates = []
     for uploads_pl_id in uploads_pl_ids_list:
         videos_ids_and_dates = uploads_playlist_videos_ids_and_dates(service,
-            part='contentDetails',
-            playlistId=uploads_pl_id,
-            maxResults=50)
-            subs_videos_ids_and_dates.append(videos_ids_and_dates)
+        part='contentDetails',
+        playlistId=uploads_pl_id,
+        maxResults=50)
+        subs_videos_ids_and_dates.append(videos_ids_and_dates)
     # Сортируем список видео по их таймкодам.        
     subs_videos_ids_and_dates = sorted(subs_videos_ids_and_dates, key=lambda x: x[1])
     
@@ -108,10 +109,6 @@ if __name__ == '__main__':
         timestamp_iso = id_and_date[1]
 
 
-
-
-
-""" 
 
 
 
