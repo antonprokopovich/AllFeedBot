@@ -128,14 +128,13 @@ if __name__ == '__main__':
     # Для каждого видео каждого канала формируем ссылку на него и его
     # таймкод для последующего сохранения в БД.
     for channel_list in subs_videos_ids_and_dates:
-        for id_and_date in channel_list:
-            network_name = 'youtube'
-            youtube_link = "https://www.youtube.com/watch?v={}".format(id_and_date[0])
-            timestamp_iso = id_and_date[1]
-            #timestamp = iso_to_unix(timestamp_iso)
-
-            print(id_and_date)   
-            #print(id_and_date[1])
+        vid, date = channel_list
+        network_name = 'youtube'
+        youtube_link = "https://www.youtube.com/watch?v={}".format(vid)
+        timestamp_iso = date
+        #timestamp = iso_to_unix(timestamp_iso)
+ 
+        print(date)
 
     
 
