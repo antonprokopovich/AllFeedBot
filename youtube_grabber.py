@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import dateutil.parser as dp
+
 import os
 
 import google.oauth2.credentials
@@ -26,6 +28,17 @@ def get_authenticated_service():
 
 # [Весь код выше взял из скрипта из раздела документации YouTube API
 # по работе с OAuth (https://developers.google.com/youtube/v3/quickstart/python)]
+
+
+def iso_to_unix(time_iso):
+    """
+    Функция для перевода временного кода в формате iso (формат
+    используемый youtube'ом) в формат unix time (формат для нашей БД).
+    """
+    parsed_t = dp.parse(timestamp_iso)
+    unix_time = parsed_t.strftime('%s')
+    return unix_time
+
 
 def my_subscriptions_ids_list(service, **kwargs):
     """
@@ -67,6 +80,8 @@ def uploads_playlist_videos_ids_and_dates(service, **kwargs):
     return videos_ids_and_dates
 
 
+
+#def youtube_grabber():
 if __name__ == '__main__':
     # When running locally, disable OAuthlib's HTTPs verification. When
     # running in production *do not* leave this option enabled.
@@ -90,9 +105,9 @@ if __name__ == '__main__':
         uploads_pl_ids_list.append(uploads_pl_id)
     #print(uploads_pl_ids_list)
 
-    # Получаем *список из списков из кортежей* (id и таймкодов) для каждого видео для
-    # каждого канала (то есть все видео со всех каналов, на которые подписан
-    # пользователь).
+    # Получаем *список из списков из кортежей* (id и таймкодов) для
+    # последних n видео (n = maxResults) для каждого канала (то есть
+    # видео со всех каналов, на которые подписан пользователь).
     subs_videos_ids_and_dates = []
     for uploads_pl_id in uploads_pl_ids_list:
         videos_ids_and_dates = uploads_playlist_videos_ids_and_dates(service,
@@ -100,17 +115,27 @@ if __name__ == '__main__':
         playlistId=uploads_pl_id,
         maxResults=10)
         subs_videos_ids_and_dates.append(videos_ids_and_dates)
+    # Из списка списков кортежей делаем просто список кортежей
+    # (раскрываем список каждого канала), чтобы можно было отсортировать
+    # по таймкоду все видео со всех каналов.
+    subs_videos_ids_and_dates = [tup for channel_list in subs_videos_ids_and_dates for tup in channel_list]
     # Сортируем список видео по их таймкодам.        
     subs_videos_ids_and_dates = sorted(subs_videos_ids_and_dates, key=lambda x: x[1])
-    print(subs_videos_ids_and_dates)
+    #print(subs_videos_ids_and_dates)
 
-    # Для каждого видео формируем ссылку на него и его таймкод для
-    # последующего сохранения в БД.
-    for id_and_date in subs_videos_ids_and_dates:
-        youtube_link = "https://www.youtube.com/watch?v={}".format(id_and_date[0])
-        timestamp_iso = id_and_date[1]
 
-        #print(youtube_link)
+#if __name__ == '__main__':
+    # Для каждого видео каждого канала формируем ссылку на него и его
+    # таймкод для последующего сохранения в БД.
+    for channel_list in subs_videos_ids_and_dates:
+        for id_and_date in channel_list:
+            network_name = 'youtube'
+            youtube_link = "https://www.youtube.com/watch?v={}".format(id_and_date[0])
+            timestamp_iso = id_and_date[1]
+            #timestamp = iso_to_unix(timestamp_iso)
+
+            print(id_and_date)   
+            #print(id_and_date[1])
 
     
 
