@@ -48,13 +48,13 @@ def channel_uploads_playlist_id(service, **kwargs):
     results = service.channels().list(
         **kwargs
         ).execute()
-    uploads_pl_id = results['items']['contentDetails']["relatedPlaylists"]["uploads"]
+    uploads_pl_id = results['items'][0]['contentDetails']["relatedPlaylists"]["uploads"]
     return uploads_pl_id
 
 def uploads_playlist_videos_ids_and_dates(service, **kwargs):
     """
-    Метод возвращает id (и таймкод, чтобы сортировать позже) каждого видео
-    загруженного на канал.
+    Метод возвращает *список кортежей*, состоящих из id и таймкода
+    (чтобы сортировать позже) каждого видео загруженного на канал.
     """
     results = service.playlistItems().list(
         **kwargs
@@ -87,9 +87,10 @@ if __name__ == '__main__':
         part='contentDetails',
         id=sub_id,
         maxResults=50)
-    uploads_pl_ids_list.append(uploads_pl_id)
+        uploads_pl_ids_list.append(uploads_pl_id)
+    #print(uploads_pl_ids_list)
 
-    # Получаем список из списков (id и таймкодов) для каждого видео для
+    # Получаем *список из списков из кортежей* (id и таймкодов) для каждого видео для
     # каждого канала (то есть все видео со всех каналов, на которые подписан
     # пользователь).
     subs_videos_ids_and_dates = []
@@ -97,16 +98,21 @@ if __name__ == '__main__':
         videos_ids_and_dates = uploads_playlist_videos_ids_and_dates(service,
         part='contentDetails',
         playlistId=uploads_pl_id,
-        maxResults=50)
+        maxResults=10)
         subs_videos_ids_and_dates.append(videos_ids_and_dates)
     # Сортируем список видео по их таймкодам.        
     subs_videos_ids_and_dates = sorted(subs_videos_ids_and_dates, key=lambda x: x[1])
-    
+    print(subs_videos_ids_and_dates)
+
     # Для каждого видео формируем ссылку на него и его таймкод для
     # последующего сохранения в БД.
     for id_and_date in subs_videos_ids_and_dates:
         youtube_link = "https://www.youtube.com/watch?v={}".format(id_and_date[0])
         timestamp_iso = id_and_date[1]
+
+        #print(youtube_link)
+
+    
 
 
 
