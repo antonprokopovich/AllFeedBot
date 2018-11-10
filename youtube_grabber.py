@@ -4,6 +4,7 @@ import json
 
 import sqlite3
 import google.oauth2.credentials
+import google.auth.transport
 
 from dateutil import parser as dp
 from googleapiclient.discovery import build
@@ -36,41 +37,87 @@ SCOPES = ['https://www.googleapis.com/auth/youtube.force-ssl']
 API_SERVICE_NAME = 'youtube'
 API_VERSION = 'v3'
 
+# Переменная, хранящая данные авторизации
+credentials = None
+# Переменная, представляющая ресурс (для API запросов)
+service = None
+
 def safe_api_request(func):
     """
-    ...
+    Декоратор, который отливливает exception'ы о просроченном access
+    token'е и обновляет его
     """
     def wrapper(*args, **kw):
         try:
             # Вызываем функцию с ее аргументами
             return func(*args, **kw)
         except RefreshError:
-            service = args[0]
-            credentials = service.credentials
-            #credentials.refresh_token
+            # Обвновляем access token и получаем новый объект
+            # ресурса (новй service с обновленным токенов)
+            args[0] = refresh_access_token(credentials)
+            # Еще раз вызываем функцию
+            return func(*args, **kw)
+
     return wrapper
 
-def save_tokens(creds):
+def save_creds(creds):
     """
-    Сохраняем refresh token в текстовый файл.
+    Сохраняем credentials в текстовый файл.
     """
-    tokens = {
+    creds_dict = {
         'refresh_token': creds.refresh_token,
-        'access_token': creds.access_token
+        'access_token': creds.token,
+        'token_uri': creds.token_uri,
+        'client_id': creds.client_id,
+        'client_secret': creds.client_secret
     }
-    with open('tokens.txt', 'w') as f:
-        f.write(json.dumps(tokens))
+    with open('creds.json', 'w') as f:
+        f.write(json.dumps(creds_dict))
+
+def load_creds():
+    """
+    Получаем сохраненные данные и создаем объект google.oauth2.credentials.Credentials.
+    Если данных нет, то возвращаем None
+    """
+    try:
+        with open('creds.json', 'r') as f:
+            # Загружаем данные из файла и создаем словарь
+            creds_dict = json.loads(f.read())
+            # Создаем объект google.oauth2.credentials.Credentials из словаря
+            creds = google.oauth2.credentials.Credentials(
+                creds_dict['access_token'],
+                refresh_token=creds_dict['refresh_token'],
+                token_uri=creds_dict['token_uri'],
+                client_id=creds_dict['client_id'],
+                client_secret=creds_dict['client_secret'],
+            )
+            return creds
+    except:
+        return
+
+def refresh_access_token(creds):
+    """
+    Функция обновляет access token, используя текущий refresh token
+    """
+    creds.refresh(google.auth.transport.requests.Request())
+    return build(API_SERVICE_NAME, API_VERSION, credentials = creds)
 
 def get_authenticated_service():
-"""
-"""    
-    flow = InstalledAppFlow.from_client_secrets_file(CLIENT_SECRETS_FILE, SCOPES)
-    credentials = flow.run_console()
+    """
+    """
+    global credentials
 
-    save_tokens(credentials)
-    service = build(API_SERVICE_NAME, API_VERSION, credentials = credentials)
-    service.credentials = credentials
-    return service
+    flow = InstalledAppFlow.from_client_secrets_file(CLIENT_SECRETS_FILE, SCOPES)
+
+    # Пытаемся получить сохраненные ранее credentials,
+    # если не удается - создаем их и сохраняем
+    credentials = load_creds()
+    if credentials is None:
+        credentials = flow.run_console()
+
+    save_creds(credentials) # сохраняем для будущих запусков
+
+    return build(API_SERVICE_NAME, API_VERSION, credentials = credentials)
 
 def iso_to_unix(time_iso):
     """
@@ -128,6 +175,8 @@ def uploads_playlist_videos_ids_and_dates(service, **kwargs):
 
 
 def youtube_grabber():
+    global service
+
     # When running locally, disable OAuthlib's HTTPs verification. When
     # running in production *do not* leave this option enabled.
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
@@ -210,3 +259,4 @@ def youtube_grabber():
 """
 #if __name__ == '__main__':
 
+youtube_grabber()
