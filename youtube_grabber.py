@@ -182,8 +182,9 @@ def youtube_grabber():
     
     # Формируем список id всех пользователей, подписанных на
     # рассылку YouTube.
-    user_ids = [
-        user_id[0] for user_id in cursor.execute("select user_id from users")
+    users_ids = [
+        user_id[0] for user_id in cursor.execute(
+        "SELECT user_id FROM users WHERE networks LIKE '%youtube%'")
     ]
 
     # Для каждого видео каждого канала формируем ссылку на него и его
@@ -191,7 +192,7 @@ def youtube_grabber():
     for channel_list in subs_videos_ids_and_dates:
         video_id, date = channel_list
         # Переписать user_id
-        user_id = '123'
+        user_id = user
         network_name = 'youtube'
         video_link = "https://www.youtube.com/watch?v={}".format(video_id)
 
