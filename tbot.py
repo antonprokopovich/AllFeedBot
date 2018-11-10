@@ -19,9 +19,8 @@ bot = Bot(bot_token)
 connection = sqlite3.connect('bot_db.db', check_same_thread=False, timeout=10)
 cursor = connection.cursor()
 
-user_id = None
 # Позже добавим названия других сетей в список.
-all_networks = ["VK"]
+all_networks = ["VK", "YouTube"]
 # Словарь, который будем преобразовывать в json-формат (строку)
 # и добавлять в БД в таблицу users колонку networks в виде 
 # {'network_1':{'subscribed':True, 'last_checked': 001}, 'network_2':{'subscribed':False, 'last_checked': 002}}
@@ -43,9 +42,12 @@ def quiet_exec(f):
 
 @quiet_exec 
 def bot_start(bot, update):
+    """
+    Хэндлер команды /start, которая отправляется от пользователя боту
+    автоматически при отправке 
+    """
     # При начале работы с ботом автоматически вызывается команда /start
-    # и пользователю присвается user_id.
-    global user_id
+    # и пользователю присвается user_id, под которым он заносится в БД.
     user_id = update.message.chat.id
     # Временно зададим единый канал для всех пользователей.
     # Вместо id канала используем @channelusername.
@@ -137,6 +139,19 @@ def choice_handling(bot, update):
     global user_id
     global adding
     chosen_network = update.message.text
+
+    if chosen_network.lower() = 'youtube':
+    """
+    Если добавлена сеть YouTube, то будет выполняться протокол OAuth,
+    по которому бот отправит пользователю ссылку на авторизацию,
+    пройдя по которой пользователь передаст боту права на чтение данных
+    его youtube-аккаунта, передав боту код авторизации (authorization code/grant).
+    По коду авторизации бот получит от сервера YouTube токен доступа (access_token),
+    по которому бот сможет отправлять запросы к YouTube API пока не истечет срок
+    действия токена. По истечению срока, мы будет автоматически обновлять токен,
+    то есть заменять его на новый действующий.
+    """
+        pass
 
     if adding:
         db_user_networks[chosen_network] = {'subscribed': True, 'last_checked': 0}
