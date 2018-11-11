@@ -60,6 +60,13 @@ def safe_api_request(func):
 
     return wrapper
 
+def refresh_access_token(creds):
+    """
+    Функция обновляет access token, используя текущий refresh token
+    """
+    creds.refresh(google.auth.transport.requests.Request())
+    return build(API_SERVICE_NAME, API_VERSION, credentials = creds)
+
 def save_creds(creds):
     """
     Сохраняем credentials в текстовый файл.
@@ -76,8 +83,9 @@ def save_creds(creds):
 
 def load_creds():
     """
-    Получаем сохраненные данные и создаем объект google.oauth2.credentials.Credentials.
-    Если данных нет, то возвращаем None
+    Получаем сохраненные данные и создаем объект 
+    google.oauth2.credentials.Credentials (https://bit.ly/2POf6e0).
+    Если данных нет, то возвращаем None.
     """
     try:
         with open('creds.json', 'r') as f:
@@ -91,16 +99,13 @@ def load_creds():
                 client_id=creds_dict['client_id'],
                 client_secret=creds_dict['client_secret'],
             )
+            # Если access token в credentials просрочен, то обновляем его
+            if credentials.expired:
+                refresh_access_token(creds)
+
             return creds
     except:
         return
-
-def refresh_access_token(creds):
-    """
-    Функция обновляет access token, используя текущий refresh token
-    """
-    creds.refresh(google.auth.transport.requests.Request())
-    return build(API_SERVICE_NAME, API_VERSION, credentials = creds)
 
 def get_authenticated_service():
     """
@@ -128,6 +133,7 @@ def iso_to_unix(time_iso):
     unix_time = parsed_t.strftime('%s')
     return unix_time
 
+@safe_api_request
 def my_subscriptions(service, **kwargs):
     """
     Функция выполняет get запрос к api методу list() ресурса subscriptions(),
@@ -241,7 +247,7 @@ def youtube_grabber():
     for channel_list in subs_videos_ids_and_dates:
         video_id, date = channel_list
         # Переписать user_id
-        user_id = user
+        user_id = '123'
         network_name = 'youtube'
         video_link = "https://www.youtube.com/watch?v={}".format(video_id)
 
@@ -254,9 +260,10 @@ def youtube_grabber():
     connection.commit()
 
 """
-- Добавить итерацию по пользователям, переменную user_id.
-
+- Добавить итерацию по пользователям, переменную user_id как аргумент граббера.
 """
-#if __name__ == '__main__':
 
-youtube_grabber()
+#"""
+if __name__ == '__main__':
+    youtube_grabber()
+#"""
