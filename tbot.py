@@ -11,13 +11,18 @@ from grabber import vk_grabber
 # Из модуля проверки БД на наличие новых постов импортируем
 # основную функцию.
 from dbchecker import start_checker
+from youtube_grabber import get_authenticated_service
+
 
 bot_token = "781241991:AAF8n_sfMKiyNlXJ329-D2nRdrTwOURS6GE"
 bot = Bot(bot_token)
 
-
 connection = sqlite3.connect('bot_db.db', check_same_thread=False, timeout=10)
 cursor = connection.cursor()
+
+# Телеграм-id пользователя будет инициализирован при первом обращении
+# к боту, когда отправляется команда /start.
+user_id = None
 
 # Позже добавим названия других сетей в список.
 all_networks = ["VK", "YouTube"]
@@ -111,7 +116,7 @@ def bot_add_network(bot, update):
 
 @quiet_exec
 def bot_del_network(bot, update):
-    """Хэндлер обрабатывающий команду /del и предоставляющий
+    """Обрабатывает команду /del и предоставляющий
     пользователю варианты доступных для добавления социальных сетей."""
     global adding
     adding = False
@@ -133,27 +138,31 @@ def bot_del_network(bot, update):
 @quiet_exec
 def choice_handling(bot, update):
     """Хэндлер срабатывающий после того, как пользователь выбрал сеть
-    для добавления/удаления и обновляющий список рассылок db_user_networks.
+    для добавления/удаления, и обновляющий список рассылок db_user_networks.
     """
     global db_user_networks
-    global user_id
     global adding
+    global user_id
+
+    user_id = update.message.chat.id
     chosen_network = update.message.text
 
-    if chosen_network.lower() = 'youtube':
-    """
-    Если добавлена сеть YouTube, то будет выполняться протокол OAuth,
-    по которому бот отправит пользователю ссылку на авторизацию,
-    пройдя по которой пользователь передаст боту права на чтение данных
-    его youtube-аккаунта, передав боту код авторизации (authorization code/grant).
-    По коду авторизации бот получит от сервера YouTube токен доступа (access_token),
-    по которому бот сможет отправлять запросы к YouTube API пока не истечет срок
-    действия токена. По истечению срока, мы будет автоматически обновлять токен,
-    то есть заменять его на новый действующий.
-    """
-        pass
-
     if adding:
+
+            if chosen_network.lower() = 'youtube':
+            """
+            Если добавлена сеть YouTube, то будет выполняться протокол OAuth,
+            по которому бот отправит пользователю ссылку на авторизацию,
+            пройдя по которой пользователь передаст боту права на чтение данных
+            его youtube-аккаунта, передав боту код авторизации (authorization code/grant).
+            По коду авторизации бот получит от сервера YouTube токен доступа (access_token),
+            по которому бот сможет отправлять запросы к YouTube API пока не истечет срок
+            действия токена. По истечению срока, мы будет автоматически обновлять токен,
+            то есть заменять его на новый действующий.
+            """
+                #get_authenticated_service(user_id)
+                pass
+
         db_user_networks[chosen_network] = {'subscribed': True, 'last_checked': 0}
         msg = "Сеть {} добавлена в вашу рассылку.".format(chosen_network)
         msg += "\nДля добавления других сетей, повторно воспользуйтесь командой /add"
@@ -175,7 +184,6 @@ def choice_handling(bot, update):
     connection.commit()
 
 def add_filter(bot, update, args):
-
     pass
 
 
@@ -200,7 +208,10 @@ if __name__ == "__main__":
     updater.idle()
 
 
-
+"""
+- Проверить запись значения networks в БД в choise_handling()
+– 
+"""
 
 
 
