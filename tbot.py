@@ -211,11 +211,3 @@ if __name__ == "__main__":
 - Проверить запись значения networks в БД в choise_handling()
 – 
 """
-
-
-
-
-
-
-
-

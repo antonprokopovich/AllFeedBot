@@ -303,6 +303,7 @@ def youtube_grabber():
                     [video_link, timestamp, network_name, user_id]
                 )
                 connection.commit()
+            
 
 """
 - Добавить итерацию по пользователям, переменную user_id как аргумент граббера.
