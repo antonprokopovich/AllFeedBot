@@ -7,7 +7,7 @@ from telegram.ext import Updater, CommandHandler, ConversationHandler, MessageHa
 from telegram import User, ReplyKeyboardMarkup, Bot
 
 # Из модуля граббера импортируем функцию граббера для вк.
-from grabber import vk_grabber
+from vk_grabber import vk_grabber
 # Из модуля проверки БД на наличие новых постов импортируем
 # основную функцию.
 from dbchecker import start_checker
@@ -149,7 +149,7 @@ def choice_handling(bot, update):
 
     if adding:
 
-            if chosen_network.lower() = 'youtube':
+        if chosen_network.lower() == 'youtube':
             """
             Если добавлена сеть YouTube, то будет выполняться протокол OAuth,
             по которому бот отправит пользователю ссылку на авторизацию,
@@ -160,8 +160,7 @@ def choice_handling(bot, update):
             действия токена. По истечению срока, мы будет автоматически обновлять токен,
             то есть заменять его на новый действующий.
             """
-                #get_authenticated_service(user_id)
-                pass
+            get_authenticated_service(user_id)
 
         db_user_networks[chosen_network] = {'subscribed': True, 'last_checked': 0}
         msg = "Сеть {} добавлена в вашу рассылку.".format(chosen_network)
@@ -193,7 +192,7 @@ if __name__ == "__main__":
     # ??? user_id для записи в таблицу posts БД будет получен только
     # после вызова юзером команды /start. Как запускать поток с
     # граббером только ПОСЛЕ вызова /start? .
-    start_new_thread(vk_grabber, (,))
+    start_new_thread(vk_grabber, ())
     start_new_thread(start_checker, (bot,))
 
     updater = Updater(bot_token)

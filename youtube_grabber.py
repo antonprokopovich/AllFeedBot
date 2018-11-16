@@ -237,6 +237,8 @@ def youtube_grabber():
         user_id[0] for user_id in cursor.execute(
         "SELECT user_id FROM users WHERE networks LIKE '%youtube%'")
     ]
+
+    # ОСНОВНОЙ ЦИКЛ:
     # Для каждого пользователя парсим ссылки на новые видео и сохраняем в БД.
     for user_id in user_ids:
 
@@ -300,7 +302,7 @@ def youtube_grabber():
                     "insert into posts values (NULL, NULL, ?, ?, ?, ?)",
                     [video_link, timestamp, network_name, user_id]
                 )
-        connection.commit()
+                connection.commit()
 
 """
 - Добавить итерацию по пользователям, переменную user_id как аргумент граббера.
