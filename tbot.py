@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 from _thread import start_new_thread
 import traceback
+import json
+
 import sqlite3
 
 from telegram.ext import Updater, CommandHandler, ConversationHandler, MessageHandler, Filters
 from telegram import User, ReplyKeyboardMarkup, Bot
 
-# Из модуля граббера импортируем функцию граббера для вк.
 from vk_grabber import vk_grabber
+from youtube_grabber import youtube_grabber
 # Из модуля проверки БД на наличие новых постов импортируем
 # основную функцию.
 from dbchecker import start_checker
@@ -22,7 +24,7 @@ cursor = connection.cursor()
 
 # Телеграм-id пользователя будет инициализирован при первом обращении
 # к боту, когда отправляется команда /start.
-user_id = None
+#user_id = None
 
 # Позже добавим названия других сетей в список.
 all_networks = ["VK", "YouTube"]
@@ -94,15 +96,22 @@ def bot_add_network(bot, update):
     global adding
     adding = True
 
-    global user_networks
-    # Списки user_networks и networks_to_add являются обратными друг
-    # дгуру: добавляя элемент в одну из них, мы убираем его из дургой,
-    # и наоборот. 
-    user_networks = [
-    network for network, value in db_user_networks.items() if value['subscribed'] == True
-    ]
+    user_id = update.message.chat.id
+    # Выбираем из таблицы users БД данных запись соответствующую
+    # текущему пользователю.
+    cursor.execute('select networks from users where user_id = ?', (user_id))
+    # В формате json сохраняем данные из ячейки networks
+    bd_networks_json = cursor.fetchone()[2]
+    # Конвертируем json в python-словарь
+    user_networks_dict = json.loads(db_user_networks_js) 
+    # Создаем список из соц. сетей, которые пользователь ранее добавил в рассылку.
+    user_networks_list = [key for key, values in user_networks.items() if values['subscribed'] == True]
+
+    # Списки user_networks_list и networks_to_add являются обратными друг
+    # дгуру: добавляя элемент в один из них, мы убираем его из дургого,
+    # и наоборот.
     networks_to_add = [
-    network for network in all_networks if network not in user_networks
+    network for network in all_networks if network not in user_networks_list
     ]
     if networks_to_add == []:
         msg = "Все доступные сети уже были добавлены."
@@ -120,11 +129,12 @@ def bot_del_network(bot, update):
     пользователю варианты доступных для добавления социальных сетей."""
     global adding
     adding = False
-    # ??? повторение
-    global user_networks 
-    user_networks = [
-    network for network, value in db_user_networks.items() if value['subscribed'] == True
-    ]
+        # ??? (Блок повторяется с предыдущим хэндлером. Вынести вне функций, сделав global user_id?)
+    user_id = update.message.chat.id
+    cursor.execute('select networks from users where user_id = ?', (user_id))
+    bd_networks_json = cursor.fetchone()[2]
+    user_networks_dict = json.loads(db_user_networks_js) 
+    user_networks_list = [key for key, values in user_networks.items() if values['subscribed'] == True]
 
     if user_networks == []:
         msg = "Список рассылок пуст."
@@ -142,7 +152,6 @@ def choice_handling(bot, update):
     """
     global db_user_networks
     global adding
-    global user_id
 
     user_id = update.message.chat.id
     chosen_network = update.message.text
@@ -188,11 +197,9 @@ def add_filter(bot, update, args):
 
 if __name__ == "__main__":
     # В отдельных потоках запускаем чеккер БД и граббер ВК.
+    #start_new_thread(vk_grabber, ())
+    #start_new_thread(youtube_grabber, ())
 
-    # ??? user_id для записи в таблицу posts БД будет получен только
-    # после вызова юзером команды /start. Как запускать поток с
-    # граббером только ПОСЛЕ вызова /start? .
-    start_new_thread(vk_grabber, ())
     start_new_thread(start_checker, (bot,))
 
     updater = Updater(bot_token)

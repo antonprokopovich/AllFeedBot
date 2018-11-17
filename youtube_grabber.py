@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 import json
+import time
 
 import sqlite3
 import google.oauth2.credentials
@@ -16,7 +17,7 @@ from google.auth.exceptions import RefreshError
 # соответствующие пользователю данные oauth
 user_id = None
 
-connection = sqlite3.connect('bot_db.db')
+connection = sqlite3.connect('bot_db.db', check_same_thread=False)
 cursor = connection.cursor()
 
 # Дата последнего YouTube-видео занесенного в базу данных. Далее по
@@ -238,7 +239,7 @@ def youtube_grabber():
         "SELECT user_id FROM users WHERE networks LIKE '%youtube%'")
     ]
 
-    # ОСНОВНОЙ ЦИКЛ:
+    # ПАРСИНГ:
     # Для каждого пользователя парсим ссылки на новые видео и сохраняем в БД.
     for user_id in user_ids:
 
@@ -303,15 +304,16 @@ def youtube_grabber():
                     [video_link, timestamp, network_name, user_id]
                 )
                 connection.commit()
-            
+
 
 """
-- Добавить итерацию по пользователям, переменную user_id как аргумент граббера.
 – Сохранять в БД полученые в первый раз credentials юзера в get_authenticated_service
 методом flow.run_console().
 """
 
-"""
+#"""
 if __name__ == '__main__':
-    youtube_grabber()
-"""
+    while True:
+        youtube_grabber()
+        time.sleep(30*60)
+#"""
