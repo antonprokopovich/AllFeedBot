@@ -10,14 +10,14 @@ import time
 connection = sqlite3.connect('bot_db.db', check_same_thread=False)
 cursor = connection.cursor()
 
-def start_checker(bot):
-    while True:
+def start_checker(): # принимает аргумент bot
+        # Список всех пользователей.
         cursor.execute('select * from users')
         for user_row in cursor:
-            # Строка json-формата из колонки networks таблицы users.
+            user_id = user_row[1]
             networks_json = user_row[2]
             networks_dict = json.loads(networks_json)
-            # Список сетей, которые добавил пользователь.
+            # Список соц. сетей, которые добавил пользователь.
             subs = [
             network for network, value in networks_dict.items() if value['subscribed'] == True
             ]
@@ -29,10 +29,26 @@ def start_checker(bot):
             channel_name = user_row[3]
 
             for sub, last_checked in zip(subs, subs_last_checked):
-                cursor.execute('select * from posts where network = ? and timestamp > ? order by timestamp asc', [sub, last_checked])
-                for post_row in cursor:
-                    post_link = post_row[2]
-                    bot.send_message(channel_name, post_link)
-    # Проверяем наличие новых постов в БД каждые 4 минуты.                
-    time.sleep(4*60)                
+                #print(sub, last_checked)
+                # Список новых постов из соц. сети. 
+                cursor.execute(
+                    'select * from posts where user_id = ? and network = ? and timestamp > ? order by timestamp asc', [user_id, sub, last_checked]
+                    )
+                posts = cursor.fetchall()
+                #print(len(posts))
+                if posts != []:
+                    # Отправляем ссылку на каждый пост в канал.
+                    for post in posts:
+                        post_link = post[2]
+                        #bot.send_message(channel_name, post_link)
+                    # Обновляем занчение last_cheked в ячейке networks.
+                    last_post_timestamp = posts[-1][3]
+                    networks_dict[sub]['last_checked'] = last_post_timestamp
+                    networks_dict_json_updated = json.dumps(networks_dict)
+                    cursor.execute('update users set networks = ? where user_id = ?', (networks_dict_json_updated, user_id))
+                    connection.commit()
 
+if __name__ == '__main__':
+    while True:
+        start_checker()
+        time.sleep(30*60)

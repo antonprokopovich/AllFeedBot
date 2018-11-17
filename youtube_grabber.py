@@ -85,8 +85,10 @@ def save_creds(creds):
         'client_id': creds.client_id,
         'client_secret': creds.client_secret
     }
+    """
     with open('creds.json', 'w') as f:
         f.write(json.dumps(creds_dict))
+    """
 
     # И/или сохраняем в БД
     cursor.execute('insert into oauth_creds values (NULL, ?, ?, ?, ?, ?)', list(creds_dict.values()))
@@ -127,7 +129,7 @@ def load_creds(user_id):
             )
         """
             # Если access token в credentials просрочен, то обновляем его
-            #if credentials.expired:
+            #if creds.expired:
             #    refresh_access_token(creds)
         return creds
     except:
@@ -238,6 +240,7 @@ def youtube_grabber():
         user_id[0] for user_id in cursor.execute(
         "SELECT user_id FROM users WHERE networks LIKE '%youtube%'")
     ]
+    #print(user_ids)
 
     # ПАРСИНГ:
     # Для каждого пользователя парсим ссылки на новые видео и сохраняем в БД.

@@ -27,7 +27,7 @@ cursor = connection.cursor()
 #user_id = None
 
 # Позже добавим названия других сетей в список.
-all_networks = ["VK", "YouTube"]
+all_networks = ["vk", "youtube"]
 # Словарь, который будем преобразовывать в json-формат (строку)
 # и добавлять в БД в таблицу users колонку networks в виде 
 # {'network_1':{'subscribed':True, 'last_checked': 001}, 'network_2':{'subscribed':False, 'last_checked': 002}}
@@ -154,11 +154,11 @@ def choice_handling(bot, update):
     global adding
 
     user_id = update.message.chat.id
-    chosen_network = update.message.text
+    chosen_network = update.message.text.lower()
 
     if adding:
 
-        if chosen_network.lower() == 'youtube':
+        if chosen_network == 'youtube':
             """
             Если добавлена сеть YouTube, то будет выполняться протокол OAuth,
             по которому бот отправит пользователю ссылку на авторизацию,
