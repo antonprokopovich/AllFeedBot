@@ -10,7 +10,7 @@ import time
 connection = sqlite3.connect('bot_db.db', check_same_thread=False)
 cursor = connection.cursor()
 
-def start_checker(): # принимает аргумент bot
+def start_checker(bot): # принимает аргумент bot
         # Список всех пользователей.
         cursor.execute('select * from users')
         for user_row in cursor:
@@ -30,7 +30,7 @@ def start_checker(): # принимает аргумент bot
 
             for sub, last_checked in zip(subs, subs_last_checked):
                 #print(sub, last_checked)
-                # Список новых постов из соц. сети. 
+                # Список новых постов из соц. сети.
                 cursor.execute(
                     'select * from posts where user_id = ? and network = ? and timestamp > ? order by timestamp asc', [user_id, sub, last_checked]
                     )
@@ -40,7 +40,7 @@ def start_checker(): # принимает аргумент bot
                     # Отправляем ссылку на каждый пост в канал.
                     for post in posts:
                         post_link = post[2]
-                        #bot.send_message(channel_name, post_link)
+                        bot.send_message(channel_name, post_link)
                     # Обновляем занчение last_cheked в ячейке networks.
                     last_post_timestamp = posts[-1][3]
                     networks_dict[sub]['last_checked'] = last_post_timestamp

@@ -101,7 +101,6 @@ def load_creds(user_id):
     google.oauth2.credentials.Credentials (https://bit.ly/2POf6e0).
     Если данных нет, то возвращаем None
     """
-
     try:
         # Из БД получаем список из строк формата
         # [access_token, refresh_token, token_uri, client_id, client_secret]
@@ -140,7 +139,7 @@ def get_authenticated_service(user_id):
     Получаем ресурс (для API запросов). Для этого используются oauth
     данные пользователя (credentials), получаемые функцией load_creds
     из БД по Телеграм-id пользователя, который передается аргументом
-    функции (user_id)
+    функции (user_id).
     """
     global credentials
 
@@ -236,16 +235,18 @@ def youtube_grabber():
 
     # Формируем список id всех пользователей, подписанных на
     # рассылку YouTube.
-    user_ids = [
-        user_id[0] for user_id in cursor.execute(
-        "SELECT user_id FROM users WHERE networks LIKE '%youtube%'")
+    user_infos = [
+        (user_id, json.loads(networks)) for user_id, networks in cursor.execute(
+        "SELECT user_id, networks FROM users WHERE networks LIKE '%youtube%'")
     ]
     #print(user_ids)
 
     # ПАРСИНГ:
     # Для каждого пользователя парсим ссылки на новые видео и сохраняем в БД.
-    for user_id in user_ids:
-
+    for user_id, user_network in user_infos:
+        if user_network['youtube']['subscribed'] != True:
+            continue
+            
         service = get_authenticated_service(user_id)
 
         # Получаем список id каналов, на которые подписан пользователь.
@@ -307,7 +308,6 @@ def youtube_grabber():
                     [video_link, timestamp, network_name, user_id]
                 )
                 connection.commit()
-
 
 """
 – Сохранять в БД полученые в первый раз credentials юзера в get_authenticated_service
