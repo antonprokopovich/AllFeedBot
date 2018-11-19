@@ -1,6 +1,7 @@
 import json
 import os
 
+import sqlite3
 import tornado.ioloop
 import tornado.web
 import torndsession
@@ -15,6 +16,8 @@ SCOPES = ['https://www.googleapis.com/auth/youtube.force-ssl']
 API_SERVICE_NAME = 'youtube'
 API_VERSION = 'v3'
 
+connection = sqlite3.connect('bot_db.db')
+cursor = connection.cursor()
 
 class MainHandler(tornado.web.RequestHandler):
     def get(self):
@@ -46,7 +49,11 @@ class OAuthCallbackYoutubeHandler(tornado.web.RequestHandler):
         }
         self.write("USER_ID:" + user_id)
         self.write("CREDS="+json.dumps(creds_dict, indent=4))
-        # сохраняем credentials в БД...
+        self.write("\nАвторизация успешно пройдена.")
+        # сохраняем credentials в БД.
+        cursor.execute('insert into oauth_creds values (NULL, ?, ?, ?, ?, ?)', list(creds_dict.values()))
+        connection.commit()
+
 
 class AuthYoutubeHandler(tornado.web.RequestHandler):
     def get(self):
@@ -60,6 +67,7 @@ class AuthYoutubeHandler(tornado.web.RequestHandler):
         access_type='offline',
         # This parameter enables incremental auth.
         include_granted_scopes='true')
+
         self.set_cookie('state', state)
         self.set_cookie('userid', user_id)
         self.redirect(authorization_url)

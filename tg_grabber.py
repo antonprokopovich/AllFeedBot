@@ -6,7 +6,7 @@
 заносит в БД информацию о новой подписке юзера и текущее время в качестве
 метки last_checked.
 - Если все юзеры отписались от конкретного канала, клиент тоже
-отписывается от него.
+отписывается от него.(?)
 – Раз в n минут клиент считывает сообщения в каждом канале,
 на который подписан юзер, начиная с id (по тайкоду сложнее) последнего
 сообщения (поста) занесенного в БД. Считанное сообщение разбирается
@@ -32,11 +32,17 @@ _ ? Клиент из telethon может сразу пересылать соо
 клиентом объекты класса Message в базу, и потом воссоздавать их из базы
 для перессылки юзеру?
 """ 
+import sqlite3
+import json
 
+from datetime import datetime
 from telethon.tl.functions.channels import JoinChannelRequest
 from telethon.tl.functions.channels import LeaveChannelRequest
 from telethon.sync import TelegramClient
 from telethon.tl.custom import Message
+
+connection = sqlite3.connect('bot_db.db')
+cursor = connection.cursor()
 
 # Данные для создания телеграм-клиента
 api_id = 654585
@@ -56,8 +62,10 @@ if not client.is_user_authorized():
     me = client.sign_in(phone_number, input('Enter code: '))
 #client.send_message('self', 'Hello World from Telethon!')
 
-# Вступаем клиентом в канал
-client(JoinChannelRequest(channel))
+# Клиентом можно вступать в канал или покидать его
+#client(JoinChannelRequest(channel))
+#client(LeaveChannelRequest(channel))
+
 """
 msg_ids =[]
 msgs = []
@@ -65,32 +73,42 @@ for msg in client.iter_messages(channel, limit=5):
     msg_ids.append(msg.id)
     msgs.append(msg.message)
 
-
 client.send_message('self', client.get_messages(channel)[0])
 
 """
-print(client.get_messages(channel)[0].date)
-print(type(client.get_messages(channel)[0].date))
+msg_date = client.get_messages(channel)[0].date
 
-def datetime_to_unix(time_iso):
-    """
-    Функция для перевода временного кода в формате datetime (формат
-    используемый telegram'ом) в формат unix time (формат для нашей БД).
-    """
-    parsed_t = dp.parse(time_iso)
-    unix_time = parsed_t.strftime('%s')
-    return unix_time
+print(msg_date)
+print(type(msg_date))
+print(int(msg_date.timestamp()))
 
-def get_new_messages(channel, last_msg_id):
-    message_objects = client.iter_messages(channel, min_id=last_msg_id)
-    for msg in message_objects:
-        msg_id = msg.id
-        msg_body = msg.message
-        msg_timestamp = int(iso_to(msg.date))
+def telegram_grabber(channel_name, last_msg_id):
+    user_infos = [
+        (user_id, json.loads(channels)) for user_id, channels in cursor.execute(
+            'select user_id, channels from users'
+        )
+    ]
+    # Итерируем по юзерам. Если список каналов у юзера пуст, то
+    # пропускаем его.
+    for user_id, channels_dict in user_infos:
+        if channels_dict == {}:
+            continue
+            # Названия каналов и соответствующие им метки
+            # last_checked (в них будет id последнего сообщения канала).
+            channel_names_and_timestamps = [(item[0], item[1]['last_checked']) for item in channels_dict.items() ]
 
-# In the same way, you can also leave such channel
-#client(LeaveChannelRequest(channel))
+            for channel_name, last_checked  in channel_names_and_timestamps:
+                # Считывает все новые сообщения из канала.
+                message_objects = client.iter_messages(channel_name, min_id=last_checked)
+                for msg in message_objects:
+                    msg_id = msg.id
+                    msg_body = msg.message
+                    # Дату конвертим из UTC в unix
+                    msg_timestamp = int((msg.date.timestamp()))
 
+                    cursor.execute(
+                        'inser into posts values (NULL, ?, NULL, ?, ?)', [msg_body, msg_timestamp, channel_name, user_id]
+                    )
 
 client.disconnect()
 

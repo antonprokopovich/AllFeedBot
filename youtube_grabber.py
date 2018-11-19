@@ -76,7 +76,7 @@ def refresh_access_token(creds):
 
 def save_creds(creds):
     """
-    Сохраняем credentials в текстовый файл.
+    Сохраняем credentials в БД.
     """
     creds_dict = {
         'refresh_token': creds.refresh_token,
@@ -89,11 +89,8 @@ def save_creds(creds):
     with open('creds.json', 'w') as f:
         f.write(json.dumps(creds_dict))
     """
-
-    # И/или сохраняем в БД
     cursor.execute('insert into oauth_creds values (NULL, ?, ?, ?, ?, ?)', list(creds_dict.values()))
     connection.commit()
-
 
 def load_creds(user_id):
     """
@@ -143,15 +140,11 @@ def get_authenticated_service(user_id):
     """
     global credentials
 
-    flow = InstalledAppFlow.from_client_secrets_file(
-        CLIENT_SECRETS_FILE, SCOPES
-    )
-
     # Пытаемся получить сохраненные ранее credentials,
     # если не удается - создаем их и сохраняем
     credentials = load_creds(user_id)
     if credentials is None:
-        credentials = flow.run_console()
+        return None
         """
         credentials = flow.run_local_server(self, host='localhost',
             port=8888,
@@ -237,17 +230,19 @@ def youtube_grabber():
     # рассылку YouTube.
     user_infos = [
         (user_id, json.loads(networks)) for user_id, networks in cursor.execute(
-        "SELECT user_id, networks FROM users WHERE networks LIKE '%youtube%'")
+        "SELECT user_id, networks FROM users")
     ]
     #print(user_ids)
 
-    # ПАРСИНГ:
-    # Для каждого пользователя парсим ссылки на новые видео и сохраняем в БД.
-    for user_id, user_network in user_infos:
-        if user_network['youtube']['subscribed'] != True:
+    for user_id, user_networks in user_infos:
+        if user_networks['youtube']['subscribed'] != True:
             continue
-            
+
         service = get_authenticated_service(user_id)
+        # Функция get_authenticated_service возвращает None, если юзер еще не
+        # авторизовал бота, в этом случае - пропускаем юзера.
+        if service is None:
+            continue
 
         # Получаем список id каналов, на которые подписан пользователь.
         sub_ids_list = my_subscriptions(service,
@@ -291,7 +286,7 @@ def youtube_grabber():
         )
         #print(subs_videos_ids_and_dates)
 
-
+        # ПАРСИНГ
         # Для каждого видео каждого канала формируем ссылку на него и его
         # таймкод для последующего сохранения в БД.
         for channel_list in subs_videos_ids_and_dates:

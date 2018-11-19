@@ -18,7 +18,7 @@ from youtube_grabber import get_authenticated_service
 
 auth_host = "agrbot.info:8889"
 bot_token = "781241991:AAF8n_sfMKiyNlXJ329-D2nRdrTwOURS6GE"
-bot = Bot(bot_token)
+tbot = Bot(bot_token)
 
 connection = sqlite3.connect('bot_db.db', check_same_thread=False, timeout=10)
 cursor = connection.cursor()
@@ -46,27 +46,31 @@ def quiet_exec(f):
 def bot_start(bot, update):
     """
     Хэндлер команды /start, которая отправляется от пользователя боту
-    автоматически при отправке 
+    автоматически при отправке. 
     """
     # При начале работы с ботом автоматически вызывается команда /start
     # и пользователю присвается user_id, под которым он заносится в БД.
     user_id = update.message.chat.id
-    # Временно зададим единый канал для всех пользователей.
-    # Вместо id канала используем @channelusername.
-    channel_id = "@feed_channel"
+    print(tbot.name)
 
+    # Имя или юзернейм пользователя для приветствия.
     fname = update.message.from_user.first_name
     if not fname:
         fname = update.message.from_user.username
+
+    channel_name = "@{}{}".format(user_id, fname)
+
     msg = "Приветствую, {}!".format(fname)
-    msg += "\nДля получения справки воспользуйтесь командой /help"
+    msg += "\nСоздайте Телеграм-канал с названием {}," \
+    "и добавте данного бота ({}) в администраторы канала.".format(channel_name, tbot.name)
+    msg += "\n\nДля получения дальнейшей справки воспользуйтесь командой /help"
 
     update.message.reply_text(msg)
     # При старте работы с ботом заносим id юзера и название канала в БД.
     # Если пользователь повторно воспользовался командой /start,
     # и его данные уже есть в таблице - не меняем их.
     # (IGNORE или REPLACE ?)
-    cursor.execute('INSERT or IGNORE INTO users (user_id, channel_id) VALUES (?, ?)', [user_id, channel_id])
+    cursor.execute('INSERT or IGNORE INTO users (user_id, channel_name) VALUES (?, ?)', [user_id, channel_name])
     connection.commit()
 
 @quiet_exec   
@@ -105,6 +109,7 @@ def bot_add_network(bot, update):
     user_networks_list = [
         key for key, values in user_networks_dict.items() if values['subscribed'] == True
     ]
+    #print('user_networks_list = {}'.format(user_networks_list))
 
     # Списки user_networks_list и networks_to_add являются обратными друг
     # дгуру: добавляя элемент в один из них, мы убираем его из дургого,
@@ -112,7 +117,7 @@ def bot_add_network(bot, update):
     networks_to_add = [
     network for network in all_networks if network not in user_networks_list
     ]
-    print("networks_to_add = {}".format(networks_to_add))
+    #print("networks_to_add = {}".format(networks_to_add))
     if networks_to_add == []:
         msg = "Все доступные сети уже были добавлены."
         markup = None
@@ -144,7 +149,7 @@ def bot_del_network(bot, update):
         msg = "Список рассылок пуст."
         markup = None
     else:
-        reply_keyboard = [user_networks]
+        reply_keyboard = [user_networks_list]
         msg = "Выберите сеть для удаления:\n"
         markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
     update.message.reply_text(msg, reply_markup=markup)
@@ -152,9 +157,8 @@ def bot_del_network(bot, update):
 @quiet_exec
 def choice_handling(bot, update):
     """Хэндлер срабатывающий после того, как пользователь выбрал сеть
-    для добавления/удаления, и обновляющий список рассылок db_user_networks.
+    для добавления/удаления, и обновляющий список рассылок networks в БД.
     """
-    global db_user_networks
     global adding
 
     user_id = update.message.chat.id
@@ -163,27 +167,27 @@ def choice_handling(bot, update):
     if adding:
         # Обновляем информацию о подписках пользователя в БД.
         cursor.execute(
-            'select networks from users where user_id = ?',[json.dumps(user_id)]
+            'select networks from users where user_id = ?',[user_id]
         )
         db_networks_json = cursor.fetchone()[0]
         user_networks_dict = json.loads(db_networks_json)
         # Добавляем сеть
-        user_networks_dict[chosen_network] = {'subscribed': True, 'last_checked': time.time()}
+        user_networks_dict[chosen_network] = {'subscribed': True, 'last_checked': int(time.time())}
         cursor.execute(
             'update users set networks = ? where user_id = ?',
-            [json.dumps(user_networks_dict), json.dumps(user_id)]
+            [json.dumps(user_networks_dict), user_id]
         )
         connection.commit()
 
-        msg = "Сеть {} добавлена в вашу рассылку.".format(chosen_network)
+        msg = "Сеть {} добавлена в вашу рассылку.".format(chosen_network[0].upper()+chosen_network[1:])
         if chosen_network == 'youtube':
             """
             Если добавлена сеть YouTube, то получаем права по OAuth.
             """
             auth_link = "http://{}/auth/youtube/?userid={}".format(auth_host, user_id)
-            msg += "\n Для авторизации приложения перейдите по ссылке: {}".format(auth_link)
+            msg += "\nДля авторизации приложения перейдите по ссылке: {}".format(auth_link)
 
-        msg += "\nДля добавления других сетей, повторно воспользуйтесь командой /add"
+        msg += "\n\nДля добавления других сетей, повторно воспользуйтесь командой /add"
 
         adding = False
         update.message.reply_text(msg)
@@ -191,31 +195,20 @@ def choice_handling(bot, update):
     else:
         # Обновляем информацию о подписках пользователя в БД.
         cursor.execute(
-            'select networks from users where user_id = ?', [json.dumps(user_id)]
+            'select networks from users where user_id = ?', [user_id]
         )
         db_networks_json = cursor.fetchone()[0]
         user_networks_dict = json.loads(db_networks_json)
-        user_networks_dict[chosen_network] = {'subscribed': False, 'last_checked': time.time()}
+        user_networks_dict[chosen_network] = {'subscribed': False, 'last_checked': int(time.time())}
         cursor.execute(
             'update users set networks = ? where user_id = ?',
-            [json.dumps(user_networks_dict), json.dumps(user_id)]
+            [json.dumps(user_networks_dict), user_id]
         )
         connection.commit()
 
-        msg = "Сеть {} удалена из вашей рассылки".format(chosen_network)
+        msg = "Сеть {} удалена из вашей рассылки".format(chosen_network[0].upper()+chosen_network[1:])
         msg += "\nДля удаления других сетей, повторно воспользуйтесь командой /del"
         update.message.reply_text(msg)
-
-    #db_user_networks_js = json.dumps(db_user_networks)
-    #print((db_user_networks_js))
-
-    # Запрос не записывает новое значение networks в БД.
-    # После вызова команды /add юзером и добавления сети VK, значение
-    # в колонке networks в таблице users должно стать {'VK': {'subscribed': True, 'last_checked': 0}}
-    cursor.execute(
-        'UPDATE users SET networks = ? WHERE user_id = ?', [json.dumps(db_user_networks), json.dumps(user_id)]
-    )
-    connection.commit()
 
 def add_filter(bot, update, args):
     pass
@@ -226,7 +219,7 @@ if __name__ == "__main__":
     #start_new_thread(vk_grabber, ())
     #start_new_thread(youtube_grabber, ())
 
-    start_new_thread(start_checker, (bot,))
+    start_new_thread(start_checker, (tbot,))
 
     updater = Updater(bot_token)
 
