@@ -11,10 +11,12 @@ from telegram import User, ReplyKeyboardMarkup, Bot
 
 from vk_grabber import vk_grabber
 from youtube_grabber import youtube_grabber
+from tg_grabber import telegram_grabber
 # Из модуля проверки БД на наличие новых постов импортируем
 # основную функцию.
 from dbchecker import start_checker
 from youtube_grabber import get_authenticated_service
+from tg_grabber import join_channel
 
 auth_host = "agrbot.info:8889"
 bot_token = "781241991:AAF8n_sfMKiyNlXJ329-D2nRdrTwOURS6GE"
@@ -75,13 +77,42 @@ def bot_start(bot, update):
 
 @quiet_exec   
 def bot_help(bot, update):
+    """
+    Хэндлер команды /help, которая дает справку о командах бота
+    """
     commands = [
     "/help – получить справку.",
     "/add – добавить социальную сеть.",
     "/del – удалить социальную сеть.",
+    "/add_channel @имя_канала – добавить Телеграм-канал",
+    "/del_channel @имя_канала – удалить Телеграм-канал"
     ]
-
     update.message.reply_text("\n".join(commands))
+
+
+def bot_add_channel(bot, update, args):
+    """
+    Хэндлер команды /add_channel и ее аргумента, которая добавляет в
+    список рассылок телеграм-канал указанный в качестве аргумента.
+    """
+    channel_name = ''.join(args)
+    if channel_name[0] != '@':
+        msg = "Название канала должно начинаться с символа '@'."
+        msg += "\nПопробуйте еще раз."
+    else:
+        try:
+            join_channel(channel_name)
+            msg = "Канал {} добавлен в вашу рассылку.".format(channel_name)
+        except ValueError:
+            msg = "Канал с таким названием не существует."
+
+    update.message.reply_text(msg)
+    #cursor.execute('update ')
+
+def bot_del_channel(bot, update, args):
+    pass
+
+
 
 # Флаг, который будет использоваться для перехода в режим удаления
 # или добавления соц. сетей, чтобы хэндлер choice_handling(),
@@ -180,6 +211,7 @@ def choice_handling(bot, update):
         connection.commit()
 
         msg = "Сеть {} добавлена в вашу рассылку.".format(chosen_network[0].upper()+chosen_network[1:])
+
         if chosen_network == 'youtube':
             """
             Если добавлена сеть YouTube, то получаем права по OAuth.
@@ -224,6 +256,8 @@ if __name__ == "__main__":
     updater = Updater(bot_token)
 
     updater.dispatcher.add_handler(CommandHandler("help", bot_help))
+    updater.dispatcher.add_handler(CommandHandler("add_channel", bot_add_channel, pass_args=True))
+    updater.dispatcher.add_handler(CommandHandler("del_channel", bot_del_channel, pass_args=True))
     updater.dispatcher.add_handler(CommandHandler("add", bot_add_network))
     updater.dispatcher.add_handler(CommandHandler("del", bot_del_network))
     updater.dispatcher.add_handler(CommandHandler("start", bot_start))
