@@ -81,7 +81,7 @@ def bot_help(bot, update):
     Хэндлер команды /help, которая дает справку о командах бота
     """
     commands = [
-    "/help – получить справку.",
+    "/help – получить справку.\n",
     "/add – добавить социальную сеть.",
     "/del – удалить социальную сеть.",
     "/add_channel @имя_канала – добавить Телеграм-канал",
@@ -89,16 +89,26 @@ def bot_help(bot, update):
     ]
     update.message.reply_text("\n".join(commands))
 
-
+@quiet_exec
 def bot_add_channel(bot, update, args):
     """
     Хэндлер команды /add_channel и ее аргумента, которая добавляет в
     список рассылок телеграм-канал указанный в качестве аргумента.
     """
+    user_id = update.message.chat.id
+
+    # Получаем из БД список каналов на которые юзер уже подписан
+    cursor.execute('select channels from users where user_id = ?', [json.dumps(user_id)])
+    channels_dict = json.loads(cursor.fetchone()[0])
+    channels_list =[channel for channel in channels_dict.keys()]
+
     channel_name = ''.join(args)
+
     if channel_name[0] != '@':
         msg = "Название канала должно начинаться с символа '@'."
         msg += "\nПопробуйте еще раз."
+    elif channel_name in channels_list:
+        msg = "Вы уже добавляли данный канал."
     else:
         try:
             join_channel(channel_name)
@@ -107,7 +117,12 @@ def bot_add_channel(bot, update, args):
             msg = "Канал с таким названием не существует."
 
     update.message.reply_text(msg)
-    #cursor.execute('update ')
+
+    # Заносим новый канал в БД
+    channels_dict[channel_name] = {'last_checked': int(time.time())}
+    cursor.execute('update users set channels = ?', [json.dumps(channels_dict)])
+    connection.commit()
+
 
 def bot_del_channel(bot, update, args):
     pass
@@ -133,9 +148,9 @@ def bot_add_network(bot, update):
         'select networks from users where user_id = ?', [json.dumps(user_id)]
     )
     # В формате json сохраняем данные из ячейки networks
-    db_networks_json = cursor.fetchone()[0]
+    networks_json = cursor.fetchone()[0]
     # Конвертируем json в python-словарь
-    user_networks_dict = json.loads(db_networks_json) 
+    user_networks_dict = json.loads(networks_json) 
     # Создаем список из соц. сетей, которые пользователь ранее добавил в рассылку.
     user_networks_list = [
         key for key, values in user_networks_dict.items() if values['subscribed'] == True
@@ -170,8 +185,8 @@ def bot_del_network(bot, update):
     cursor.execute(
         'select networks from users where user_id = ?', [json.dumps(user_id)]
     )
-    db_networks_json = cursor.fetchone()[0]
-    user_networks_dict = json.loads(db_networks_json) 
+    networks_json = cursor.fetchone()[0]
+    user_networks_dict = json.loads(networks_json) 
     user_networks_list = [
         key for key, values in user_networks_dict.items() if values['subscribed'] == True
     ]
@@ -200,8 +215,8 @@ def choice_handling(bot, update):
         cursor.execute(
             'select networks from users where user_id = ?',[user_id]
         )
-        db_networks_json = cursor.fetchone()[0]
-        user_networks_dict = json.loads(db_networks_json)
+        networks_json = cursor.fetchone()[0]
+        user_networks_dict = json.loads(networks_json)
         # Добавляем сеть
         user_networks_dict[chosen_network] = {'subscribed': True, 'last_checked': int(time.time())}
         cursor.execute(
@@ -229,8 +244,8 @@ def choice_handling(bot, update):
         cursor.execute(
             'select networks from users where user_id = ?', [user_id]
         )
-        db_networks_json = cursor.fetchone()[0]
-        user_networks_dict = json.loads(db_networks_json)
+        networks_json = cursor.fetchone()[0]
+        user_networks_dict = json.loads(networks_json)
         user_networks_dict[chosen_network] = {'subscribed': False, 'last_checked': int(time.time())}
         cursor.execute(
             'update users set networks = ? where user_id = ?',

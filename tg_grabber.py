@@ -61,7 +61,7 @@ if not client.is_user_authorized():
 #client.send_message('self', 'Hello World from Telethon!')
 
 # Клиентом можно вступать в канал или покидать его
-client(JoinChannelRequest(channel))
+#client(JoinChannelRequest(channel))
 #client(LeaveChannelRequest(channel))
 def join_channel(channel_name: str):
     client(JoinChannelRequest(channel_name))
