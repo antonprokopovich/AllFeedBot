@@ -15,13 +15,19 @@ SCOPES = ['https://www.googleapis.com/auth/youtube.force-ssl']
 API_SERVICE_NAME = 'youtube'
 API_VERSION = 'v3'
 
+success_url = "agrbot.info:8889/success/"
+
 connection = sqlite3.connect('bot_db.db')
 cursor = connection.cursor()
 
 class MainHandler(tornado.web.RequestHandler):
     def get(self):
         self.write("Hello, world")
-
+"""
+class SuccessHandler(tornado.web.RequestHandler):
+    def get(self):
+        self.write("Авторизация успешно пройдена.")
+"""
 class OAuthCallbackYoutubeHandler(tornado.web.RequestHandler):
     def get(self):
         state = self.get_cookie('state')
@@ -46,9 +52,9 @@ class OAuthCallbackYoutubeHandler(tornado.web.RequestHandler):
             'client_id': creds.client_id,
             'client_secret': creds.client_secret
         }
-        self.write("USER_ID:" + user_id)
-        self.write("CREDS="+json.dumps(creds_dict, indent=4))
-        self.write("\nАвторизация успешно пройдена.")
+        #self.write("USER_ID:" + user_id)
+        #self.write("CREDS="+json.dumps(creds_dict, indent=4))
+        self.redirect(success_url)
         # сохраняем credentials в БД.
         cursor.execute('insert into oauth_creds values (NULL, ?, ?, ?, ?, ?)', list(creds_dict.values()))
         connection.commit()
@@ -74,15 +80,18 @@ class AuthYoutubeHandler(tornado.web.RequestHandler):
 class OAuthCallbackVKHandler(tornado.web.RequestHandler):
     def get(self):
         access_token = self.get_argument('access_token', '')
-        self.write("Авторизация успешно пройдена.")
+        redirect(success_url)
         cursor.execute("insert into oauth_creds (access_token) values (?)", [access_token])
         connection.commit()
 
 class AuthVKHandler(tornado.web.RequestHandler):
     def get(self):
-        client_id = 6750460
-        scope = "".join(['wall', 'friends', 'offline'])
+        # Параметры запроса для формирования ссылки для авторизации
+        client_id = 6750460 # id приложения FeedBot
+        scope = "".join(['wall', 'friends', 'offline']) # параметр offline дает вечныей токен
         redirect_uri = "http://oauth.vk.com/blank.html"
+        # Ссылка авторизации VK на которую будем редиректить ВСЕХ юзеров
+        #authorization_url = "https://oauth.vk.com/authorize?redirect_uri=http://oauth.vk.com/blank.html&response_type=token&client_id=6750460&scope=wall,friends,offline&display=page"
         authorization_url = "https://oauth.vk.com/authorize?redirect_uri={}&response_type=token&client_id={}&scope={}&display=page".format(redirect_uri, client_id, scope)
         self.redirect(authorization_url)
 
@@ -90,10 +99,11 @@ class AuthVKHandler(tornado.web.RequestHandler):
 def make_app():
     return tornado.web.Application([
         (r"/", MainHandler),
+        #(r"/success/", SuccessHandler),
         (r"/auth/youtube/", AuthYoutubeHandler),
         (r"/oauth2callback/youtube/", OAuthCallbackYoutubeHandler),
-        (r"/oauth/vk/", AuthVKHandler),
-        (r"/oauth.vk.com/blank/", OAuthCallbackVKHandler)
+        (r"/auth/vk/", AuthVKHandler),
+        (r"/oauth.vk.com/blank.html/", OAuthCallbackVKHandler)
     ])
 
 if __name__ == "__main__":
