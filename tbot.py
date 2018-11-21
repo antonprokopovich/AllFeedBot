@@ -16,7 +16,6 @@ from tg_grabber import telegram_grabber
 # основную функцию.
 from dbchecker import start_checker
 from youtube_grabber import get_authenticated_service
-from tg_grabber import join_channel
 
 auth_host = "agrbot.info:8889"
 bot_token = "781241991:AAF8n_sfMKiyNlXJ329-D2nRdrTwOURS6GE"
@@ -64,7 +63,7 @@ def bot_start(bot, update):
 
     msg = "Приветствую, {}!".format(fname)
     msg += "\nСоздайте Телеграм-канал с названием {}," \
-    "и добавте данного бота ({}) в администраторы канала.".format(channel_name, tbot.name)
+    "и добавьте данного бота ({}) в администраторы канала.".format(channel_name, tbot.name)
     msg += "\n\nДля получения дальнейшей справки воспользуйтесь командой /help"
 
     update.message.reply_text(msg)
@@ -110,17 +109,13 @@ def bot_add_channel(bot, update, args):
     elif channel_name in channels_list:
         msg = "Вы уже добавляли данный канал."
     else:
-        try:
-            join_channel(channel_name)
-            msg = "Канал {} добавлен в вашу рассылку.".format(channel_name)
-        except ValueError:
-            msg = "Канал с таким названием не существует."
+        msg = "Канал {} добавлен в вашу рассылку.".format(channel_name)
 
     update.message.reply_text(msg)
 
     # Заносим новый канал в БД
     channels_dict[channel_name] = {'last_checked': int(time.time())}
-    cursor.execute('update users set channels = ?', [json.dumps(channels_dict)])
+    cursor.execute('update users set channels = ? where user_id = ?', [json.dumps(channels_dict), user_id])
     connection.commit()
 
 

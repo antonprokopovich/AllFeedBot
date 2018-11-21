@@ -11,34 +11,31 @@ import sqlite3
 connection = sqlite3.connect('bot_db.db', check_same_thread=False)
 cursor = connection.cursor()
 
-# Дата последнего поста из VK занесенного в базу данных. Далее по ней будем
-# определять до какого поста идут новые, а после какого старые (уже 
-# занесенные в базу данных).
-cursor.execute("SELECT timestamp FROM posts WHERE network = 'vk' ORDER BY timestamp DESC LIMIT 1")
-last_timestamp_vk = cursor.fetchone()[0]
-#print(last_timestamp)
-#---------------------------------------------------------------------------------------------
-
-#-------------------------------------------------------------------------------------------------
-vk_token = "a56dcc9cfab85e55830115734f36b6f56686bc685658a9dceba0c3d677423bd702b73b61fc240b78ee404"
-# Использоую last_timestamp_vk и vk_token формируем ссылку для
-# http-запроса к VK API для получения данных всех последних постов.
-vk_url = ("https://api.vk.com/method/newsfeed.get?start_time={}&filters=post,photo&v=4.0&access_token={}"
-        .format(last_timestamp_vk, vk_token))
-
 def vk_grabber():
     # Формируем список id всех пользователей, подписанных на
-    # рассылку YouTube.
-    user_ids = [
-        user_id[0] for user_id in cursor.execute(
-        "SELECT user_id FROM users WHERE networks LIKE '%vk%'")
+    # рассылку VK.
+    user_infos = [
+        (user_id, json.loads(networks)) for user_id, networks in cursor.execute(
+            'select user_id, networks from users'
+            )
     ]
-    #print(user_ids)
     # ПАРСИНГ:
     # Для каждого пользователя парсим ссылки на новые видео и сохраняем в БД.
-    for user_id in user_ids:
-        network_name = 'vk'
-        r = requests.get(vk_url)
+    for user_id, networks in user_infos:
+        if user_networks['vk']['subscribed'] != True:
+            continue
+
+        # Получаем временную метку last_checked
+        cursor.execute('select networks from users where user_id = ?', [user_id])
+        networks_dict = json.loads(cursor.fetchone()[0])
+        last_timestamp = networks_dict['vk']['last_checked']
+        # Получаем access_token
+        cursor.execute('select access_token from oauth_creds where user_id = ?', [user_id])
+        access_token = cursor.fetchone()[0]
+        # Используем временую метку и токен для формирования запроса к api
+        url = ("https://api.vk.com/method/newsfeed.get?start_time={}&filters=post,photo&v=4.0&access_token={}"
+        .format(last_timestamp_vk, access_token))
+        r = requests.get(url)
         data = r.json()
         #print(data)
         posts = data['response']['items']
@@ -51,13 +48,11 @@ def vk_grabber():
                 post_id = post.get('post_id', 0)
                 vk_link = "https://vk.com/feed?w=wall{}_{}".format(source_id, post_id)
                 #print("TEXT: {}\nVK_LINK: {}\n------------------------------".format(text, vk_link))
-
-                cursor.execute("insert into posts values (NULL, ?, ?, ?, ?, ?)", [text, vk_link, timestamp, network_name, user_id])
+                cursor.execute("insert into posts values (NULL, ?, ?, ?, ?, ?)", [text, vk_link, timestamp, 'vk', user_id])
                 connection.commit()
-
 #"""
 if __name__ == '__main__':
     while True:
         vk_grabber()
-        time.sleep(30*60)
+        time.sleep(10*60)
 #"""

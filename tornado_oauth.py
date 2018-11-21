@@ -79,13 +79,15 @@ class AuthYoutubeHandler(tornado.web.RequestHandler):
 
 class OAuthCallbackVKHandler(tornado.web.RequestHandler):
     def get(self):
+        user_id = self.get_cookie('userid')
         access_token = self.get_argument('access_token', '')
         redirect(success_url)
-        cursor.execute("insert into oauth_creds (access_token) values (?)", [access_token])
+        cursor.execute("insert into oauth_creds (access_token, user_id) values (?, ?)", [access_token, user_id])
         connection.commit()
 
 class AuthVKHandler(tornado.web.RequestHandler):
     def get(self):
+        user_id = self.get_argument('userid', '')
         # Параметры запроса для формирования ссылки для авторизации
         client_id = 6750460 # id приложения FeedBot
         scope = "".join(['wall', 'friends', 'offline']) # параметр offline дает вечныей токен
@@ -94,6 +96,7 @@ class AuthVKHandler(tornado.web.RequestHandler):
         #authorization_url = "https://oauth.vk.com/authorize?redirect_uri=http://oauth.vk.com/blank.html&response_type=token&client_id=6750460&scope=wall,friends,offline&display=page"
         authorization_url = "https://oauth.vk.com/authorize?redirect_uri={}&response_type=token&client_id={}&scope={}&display=page".format(redirect_uri, client_id, scope)
         self.redirect(authorization_url)
+        self.set_cookie('user_id', user_id)
 
 
 def make_app():

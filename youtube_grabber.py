@@ -125,8 +125,8 @@ def load_creds(user_id):
             )
         """
             # Если access token в credentials просрочен, то обновляем его
-            #if creds.expired:
-            #    refresh_access_token(creds)
+            if creds.expired:
+                refresh_access_token(creds)
         return creds
     except:
         return
@@ -230,10 +230,10 @@ def youtube_grabber():
     # рассылку YouTube.
     user_infos = [
         (user_id, json.loads(networks)) for user_id, networks in cursor.execute(
-        "SELECT user_id, networks FROM users")
+            "select user_id, networks from users"
+        )
     ]
-    #print(user_ids)
-
+    #print(user_infos)
     for user_id, user_networks in user_infos:
         if user_networks['youtube']['subscribed'] != True:
             continue
@@ -289,7 +289,7 @@ def youtube_grabber():
         # ПАРСИНГ
         # Для каждого видео каждого канала формируем ссылку на него и его
         # таймкод для последующего сохранения в БД.
-        for channel_list in subs_videos_ids_and_dates:
+        for id_and_date in subs_videos_ids_and_dates:
             video_id, date = channel_list
             # Переписать user_id
             user_id = user_id 

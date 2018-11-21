@@ -31,8 +31,10 @@ _ ? Клиент из telethon может сразу пересылать соо
 клиентом объекты класса Message в базу, и потом воссоздавать их из базы
 для перессылки юзеру?
 """ 
+import traceback
 import sqlite3
 import json
+import time
 
 from datetime import datetime
 from telethon.tl.functions.channels import JoinChannelRequest
@@ -47,9 +49,7 @@ cursor = connection.cursor()
 api_id = 654585
 api_hash = "85b15b1918e06814c3a052f4d6e44718"
 phone_number = 89852549143
-# Название канала, ИЗ которого клиент будет пересылать посты (тестовый константный)
-channel = '@science'
-#my_channel = '@feed_channel'
+
 
 # Создаем клиента, от лица которого можно действовать как пользователь телеграма
 client = TelegramClient('session_name', api_id, api_hash)
@@ -60,13 +60,18 @@ if not client.is_user_authorized():
     me = client.sign_in(phone_number, input('Enter code: '))
 #client.send_message('@n3tw0rk3r', 'Hello World from Telethon!')
 
-# Клиентом можно вступать в канал или покидать его
-client(JoinChannelRequest(channel))
-#client(LeaveChannelRequest(channel))
-def join_channel(channel_name: str):
-    client(JoinChannelRequest(channel=channel_name))
+def quiet_exec(f):
+    def wrapper(*args, **kw):
+        try:
+            return f(*args, **kw)
+        except BaseException as e:
+            e = "Error in {}(): {}\n{}".format(
+                f.__name__, str(e), traceback.format_exc()
+            )
+            print(e)
+    return wrapper
 
-
+@quiet_exec 
 def telegram_grabber():
     # Составляем список пользователей подписанных хотя бы на один канал.
     user_infos = [
@@ -80,10 +85,14 @@ def telegram_grabber():
         channel_names_and_timestamps = [
             (item[0], item[1]['last_checked']) for item in channels_dict.items()
         ]
-
         for channel_name, last_checked  in channel_names_and_timestamps:
+            # Вступаем клиентом в канал
+            try:
+                client(JoinChannelRequest(channel_name))
+            except ValueError:
+                continue
             # Считываем клиентом все новые сообщения из канала.
-            message_objects = client.iter_messages(channel_name, min_id=last_checked)
+            message_objects = client.iter_messages(channel_name, offset_date=last_checked, reverse=True)
             for msg in message_objects:
                 msg_id = msg.id
                 msg_body = msg.message
@@ -92,9 +101,13 @@ def telegram_grabber():
                 msg_timestamp = int((msg.date.timestamp()))
 
                 cursor.execute(
-                    'inser into posts values (NULL, ?, NULL, ?, ?)', [msg_body, msg_timestamp, channel_name, user_id]
+                    'insert into posts values (NULL, ?, NULL, ?, ?, ?)', [msg_body, msg_timestamp, channel_name, user_id]
                 )
 
-client.disconnect()
+if __name__=='__main__':
 
+    while True:
+        telegram_grabber()
+        client.disconnect()
+        time.sleep(10*60)
 
