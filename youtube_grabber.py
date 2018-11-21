@@ -13,21 +13,8 @@ from googleapiclient.errors import HttpError
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.exceptions import RefreshError
 
-# Телеграм-id пользователя, по которому из БД будем получать
-# соответствующие пользователю данные oauth
-user_id = None
-
 connection = sqlite3.connect('bot_db.db', check_same_thread=False)
 cursor = connection.cursor()
-
-# Дата последнего YouTube-видео занесенного в базу данных. Далее по
-# ней будем определять до какой записи идут новые, а после какой старые
-# (уже занесенные в базу данных) видео.
-cursor.execute(
-    "SELECT timestamp FROM posts WHERE network = 'youtube' "
-    "ORDER BY timestamp DESC LIMIT 1"
-)
-last_timestamp_youtube = cursor.fetchone()[0]
 
 # Переменная CLIENT_SECRETS_FILE хранит имя файла, который содержит
 # информацию связанную с OAuth 2.0 для данного приложения, включая
@@ -45,7 +32,6 @@ API_VERSION = 'v3'
 credentials = None
 # Переменная, представляющая ресурс (для API запросов).
 service = None
-
 
 def safe_api_request(func):
     """
@@ -233,9 +219,14 @@ def youtube_grabber():
             "select user_id, networks from users"
         )
     ]
-    #print(user_infos)
-    for user_id, user_networks in user_infos:
-        if user_networks['youtube']['subscribed'] != True:
+    cursor.execute(
+    "SELECT timestamp FROM posts WHERE network = 'youtube' "
+    "ORDER BY timestamp DESC LIMIT 1"
+    )
+    last_timestamp_youtube = cursor.fetchone()[0]
+
+    for user_id, networks in user_infos:
+        if networks['youtube']['subscribed'] != True:
             continue
 
         service = get_authenticated_service(user_id)
@@ -243,6 +234,10 @@ def youtube_grabber():
         # авторизовал бота, в этом случае - пропускаем юзера.
         if service is None:
             continue
+        # Временная метка последнего YouTube-видео занесенного в базу данных. Далее по
+        # ней будем определять до какой записи идут новые, а после какой старые
+        # (уже занесенные в базу данных) видео.
+        last_checked = networks_dict['youtube_grabber']['last_checked']
 
         # Получаем список id каналов, на которые подписан пользователь.
         sub_ids_list = my_subscriptions(service,
@@ -260,7 +255,6 @@ def youtube_grabber():
                 maxResults=50
             )
             uploads_pl_ids_list.append(uploads_pl_id)
-        #print(uploads_pl_ids_list)
 
         # Получаем *список из списков из кортежей* (id и таймкодов) для
         # последних n видео (n = maxResults) для каждого канала (то есть
@@ -284,7 +278,6 @@ def youtube_grabber():
         subs_videos_ids_and_dates = sorted(
             subs_videos_ids_and_dates, key=lambda x: x[1]
         )
-        #print(subs_videos_ids_and_dates)
 
         # ПАРСИНГ
         # Для каждого видео каждого канала формируем ссылку на него и его
@@ -295,19 +288,13 @@ def youtube_grabber():
             user_id = user_id 
             network_name = 'youtube'
             video_link = "https://www.youtube.com/watch?v={}".format(video_id)
-
             timestamp = int(iso_to_unix(date))
-            if timestamp > last_timestamp_youtube:
+            if timestamp > last_checked:
                 cursor.execute(
                     "insert into posts values (NULL, NULL, ?, ?, ?, ?)",
                     [video_link, timestamp, network_name, user_id]
                 )
                 connection.commit()
-
-"""
-– Сохранять в БД полученые в первый раз credentials юзера в get_authenticated_service
-методом flow.run_console().
-"""
 
 #"""
 if __name__ == '__main__':
