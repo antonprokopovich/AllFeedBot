@@ -11,7 +11,6 @@ import googleapiclient.discovery
 
 
 CLIENT_SECRETS_FILE = "client_secret.json"
-
 SCOPES = ['https://www.googleapis.com/auth/youtube.force-ssl']
 API_SERVICE_NAME = 'youtube'
 API_VERSION = 'v3'
@@ -72,11 +71,29 @@ class AuthYoutubeHandler(tornado.web.RequestHandler):
         self.set_cookie('userid', user_id)
         self.redirect(authorization_url)
 
+class OAuthCallbackVKHandler(tornado.web.RequestHandler):
+    def get(self):
+        access_token = self.get_argument('access_token', '')
+        self.write("Авторизация успешно пройдена.")
+        cursor.execute("insert into oauth_creds (access_token) values (?)", [access_token])
+        connection.commit()
+
+class AuthVKHandler(tornado.web.RequestHandler):
+    def get(self):
+        client_id = 6750460
+        scope = "".join(['wall', 'friends', 'offline'])
+        redirect_uri = "http://oauth.vk.com/blank.html"
+        authorization_url = "https://oauth.vk.com/authorize?redirect_uri={}&response_type=token&client_id={}&scope={}&display=page".format(redirect_uri, client_id, scope)
+        self.redirect(authorization_url)
+
+
 def make_app():
     return tornado.web.Application([
         (r"/", MainHandler),
         (r"/auth/youtube/", AuthYoutubeHandler),
         (r"/oauth2callback/youtube/", OAuthCallbackYoutubeHandler),
+        (r"/oauth/vk/", AuthVKHandler),
+        (r"/oauth.vk.com/blank/", OAuthCallbackVKHandler)
     ])
 
 if __name__ == "__main__":

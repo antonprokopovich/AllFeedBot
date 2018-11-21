@@ -225,14 +225,13 @@ def choice_handling(bot, update):
         )
         connection.commit()
 
-        msg = "Сеть {} добавлена в вашу рассылку.".format(chosen_network[0].upper()+chosen_network[1:])
+        msg = "Сеть {} добавлена в список рассылок.".format(chosen_network[0].upper()+chosen_network[1:])
 
         if chosen_network == 'youtube':
-            """
-            Если добавлена сеть YouTube, то получаем права по OAuth.
-            """
             auth_link = "http://{}/auth/youtube/?userid={}".format(auth_host, user_id)
-            msg += "\nДля авторизации приложения перейдите по ссылке: {}".format(auth_link)
+        else:
+            auth_link = "http://{}/auth/vk/?userid={}".format(auth_host, user_id)
+        msg += "\nДля авторизации приложения перейдите по ссылке: {}".format(auth_link)
 
         msg += "\n\nДля добавления других сетей, повторно воспользуйтесь командой /add"
 

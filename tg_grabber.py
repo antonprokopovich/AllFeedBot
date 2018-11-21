@@ -58,13 +58,13 @@ client.connect()
 if not client.is_user_authorized():
     client.send_code_request(phone_number)
     me = client.sign_in(phone_number, input('Enter code: '))
-#client.send_message('self', 'Hello World from Telethon!')
+#client.send_message('@n3tw0rk3r', 'Hello World from Telethon!')
 
 # Клиентом можно вступать в канал или покидать его
-#client(JoinChannelRequest(channel))
+client(JoinChannelRequest(channel))
 #client(LeaveChannelRequest(channel))
 def join_channel(channel_name: str):
-    client(JoinChannelRequest(channel_name))
+    client(JoinChannelRequest(channel=channel_name))
 
 
 def telegram_grabber():
@@ -88,6 +88,7 @@ def telegram_grabber():
                 msg_id = msg.id
                 msg_body = msg.message
                 # Дату конвертим из UTC в unix
+                #msg_media = msg.
                 msg_timestamp = int((msg.date.timestamp()))
 
                 cursor.execute(

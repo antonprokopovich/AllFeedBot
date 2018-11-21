@@ -40,7 +40,11 @@ def start_checker(bot): # принимает аргумент bot
                     # Отправляем ссылку на каждый пост в канал.
                     for post in posts:
                         post_link = post[2]
-                        bot.send_message(channel_name, post_link)
+                        if post_link != None:
+                            bot.send_message(channel_name, post_link)
+                        else:
+                            post_body = post[1]
+                            bot.send_message(channel_name, post_body)
                     # Обновляем занчение last_cheked в ячейке networks.
                     last_post_timestamp = posts[-1][3]
                     networks_dict[sub]['last_checked'] = last_post_timestamp
