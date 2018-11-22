@@ -12,10 +12,8 @@ from telegram import User, ReplyKeyboardMarkup, Bot
 from vk_grabber import vk_grabber
 from youtube_grabber import youtube_grabber
 from tg_grabber import telegram_grabber
-# Из модуля проверки БД на наличие новых постов импортируем
-# основную функцию.
+
 from dbchecker import start_checker
-from youtube_grabber import get_authenticated_service
 
 auth_host = "agrbot.info:8889"
 bot_token = "781241991:AAF8n_sfMKiyNlXJ329-D2nRdrTwOURS6GE"
@@ -24,11 +22,6 @@ tbot = Bot(bot_token)
 connection = sqlite3.connect('bot_db.db', check_same_thread=False, timeout=10)
 cursor = connection.cursor()
 
-# Телеграм-id пользователя будет инициализирован при первом обращении
-# к боту, когда отправляется команда /start.
-#user_id = None
-
-# Позже добавим названия других сетей в список.
 all_networks = ["VK", "YouTube"]
 
 
@@ -84,7 +77,6 @@ def bot_help(bot, update):
     "/add – добавить социальную сеть.",
     "/del – удалить социальную сеть.",
     "/add_channel @имя_канала – добавить Телеграм-канал",
-    "/del_channel @имя_канала – удалить Телеграм-канал"
     ]
     update.message.reply_text("\n".join(commands))
 
@@ -123,7 +115,6 @@ def bot_del_channel(bot, update, args):
     pass
 
 
-
 # Флаг, который будет использоваться для перехода в режим удаления
 # или добавления соц. сетей, чтобы хэндлер choice_handling(),
 # обрабатывающий сообщение с название соц. сети, определял
@@ -156,9 +147,10 @@ def bot_add_network(bot, update):
     # дгуру: добавляя элемент в один из них, мы убираем его из дургого,
     # и наоборот.
     networks_to_add = [
-    network for network in all_networks if network not in user_networks_list
+    network for network in all_networks if network.lower() not in user_networks_list
     ]
     #print("networks_to_add = {}".format(networks_to_add))
+    #print(networks_to_add == [])
     if networks_to_add == []:
         msg = "Все доступные сети уже были добавлены."
         markup = None
@@ -190,7 +182,10 @@ def bot_del_network(bot, update):
         msg = "Список рассылок пуст."
         markup = None
     else:
-        reply_keyboard = [user_networks_list]
+        # Для reply_keyboard берем "прописные" названия из списка all_networks.
+        reply_keyboard = [
+            [network for network in all_networks if network.lower() in user_networks_list]
+        ]
         msg = "Выберите сеть для удаления:\n"
         markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
     update.message.reply_text(msg, reply_markup=markup)
@@ -203,10 +198,11 @@ def choice_handling(bot, update):
     global adding
 
     user_id = update.message.chat.id
-    chosen_network = update.message.text.lower()
+    chosen_network_uppercase = update.message.text
+    chosen_network = chosen_network_uppercase.lower()
 
     if adding:
-        # Обновляем информацию о подписках пользователя в БД.
+        # Если добавляем сеть.
         cursor.execute(
             'select networks from users where user_id = ?',[user_id]
         )
@@ -220,7 +216,7 @@ def choice_handling(bot, update):
         )
         connection.commit()
 
-        msg = "Сеть {} добавлена в список рассылок.".format(chosen_network[0].upper()+chosen_network[1:])
+        msg = "Сеть {} добавлена в список рассылок.".format(chosen_network_uppercase)
 
         if chosen_network == 'youtube':
             auth_link = "http://{}/auth/youtube/?userid={}".format(auth_host, user_id)
@@ -234,7 +230,7 @@ def choice_handling(bot, update):
         update.message.reply_text(msg)
 
     else:
-        # Обновляем информацию о подписках пользователя в БД.
+        # Если удаляем сеть.
         cursor.execute(
             'select networks from users where user_id = ?', [user_id]
         )
@@ -247,7 +243,7 @@ def choice_handling(bot, update):
         )
         connection.commit()
 
-        msg = "Сеть {} удалена из вашей рассылки".format(chosen_network[0].upper()+chosen_network[1:])
+        msg = "Сеть {} удалена из вашей рассылки.".format(chosen_network_uppercase)
         msg += "\nДля удаления других сетей, повторно воспользуйтесь командой /del"
         update.message.reply_text(msg)
 
@@ -266,7 +262,6 @@ if __name__ == "__main__":
 
     updater.dispatcher.add_handler(CommandHandler("help", bot_help))
     updater.dispatcher.add_handler(CommandHandler("add_channel", bot_add_channel, pass_args=True))
-    updater.dispatcher.add_handler(CommandHandler("del_channel", bot_del_channel, pass_args=True))
     updater.dispatcher.add_handler(CommandHandler("add", bot_add_network))
     updater.dispatcher.add_handler(CommandHandler("del", bot_del_network))
     updater.dispatcher.add_handler(CommandHandler("start", bot_start))
@@ -277,7 +272,7 @@ if __name__ == "__main__":
 
 """
 - Проверить запись значения networks в БД в choise_handling()
-– 
+
 """
 
 

@@ -52,7 +52,6 @@ def safe_api_request(func):
 
     return wrapper
 
-
 def refresh_access_token(creds):
     """
     Функция обновляет access token, используя текущий refresh token
@@ -110,9 +109,9 @@ def load_creds(user_id):
                 client_secret=creds_dict['client_secret'],
             )
         """
-            # Если access token в credentials просрочен, то обновляем его
-            if creds.expired:
-                refresh_access_token(creds)
+        # Если access token в credentials просрочен, то обновляем его
+        if creds.expired:
+            refresh_access_token(creds)
         return creds
     except:
         return
@@ -138,9 +137,7 @@ def get_authenticated_service(user_id):
             success_message=_DEFAULT_WEB_SUCCESS_MESSAGE,
             open_browser=True)
         """
-
     save_creds(credentials) # сохраняем в файл/БД для будущих запусков
-
     return build(API_SERVICE_NAME, API_VERSION, credentials = credentials)
 
 def iso_to_unix(time_iso):
@@ -208,8 +205,9 @@ def uploads_playlist_videos_ids_and_dates(service, **kwargs):
 
     return videos_ids_and_dates
 
-#-----------------------------------------------------------------
 def youtube_grabber():
+    """
+    """
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
     # Формируем список id всех пользователей, подписанных на

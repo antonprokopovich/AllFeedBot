@@ -15,17 +15,9 @@
 – Данный процесс проводится для каждого пользователя. 
 
     ВОПРОСЫ:
-– ? Как прописать в боте (tbot.py) команду/хэндлер для добавления каналов?
-Предлагать вводить название канала в качестве аргумента команды?
-– ? Создавать отдельную таблицу в БД для подписок на телеграм-каналы юзеров?
 - ? Добавлять отдельный хэндлер для просмотра списка подписок на каналы,
 чтобы юзер мог посмотреть на какие он уже подписан, и не добавлял/удалял
 их повторно?
-_ ? Клиент из telethon может сразу пересылать сообщения из каналов в канал,
-тогда можно не сохранять сообщения в БД. Но тогда они будут идти отдельным
-потоком от других соц. сетей и потоки не будут никак синхронизированны, а
-сообщения двух потоков не будут отсортированны между друг другом.
-Стоит использовать эту опцию?
 –? Так же клиент может отправлять сообщения используя объект класса Message
 телеграма. Значит если использовать ORM то можно сохранять считаные
 клиентом объекты класса Message в базу, и потом воссоздавать их из базы
@@ -79,12 +71,14 @@ def telegram_grabber():
             'select user_id, channels from users where channels is not null and channels != "{}"'
         )
     ]
+    #print(user_infos)
     for user_id, channels_dict in user_infos:
     # Названия каналов и соответствующие им метки last_checked
     # (в них будет id последнего сообщения канала).
         channel_names_and_timestamps = [
             (item[0], item[1]['last_checked']) for item in channels_dict.items()
         ]
+        #print(channel_names_and_timestamps)
         for channel_name, last_checked  in channel_names_and_timestamps:
             # Вступаем клиентом в канал
             try:
@@ -93,7 +87,9 @@ def telegram_grabber():
                 continue
             # Считываем клиентом все новые сообщения из канала.
             message_objects = client.iter_messages(channel_name, offset_date=last_checked, reverse=True)
+            #print(next(message_objects).message)
             for msg in message_objects:
+                #print(type(msg))
                 msg_id = msg.id
                 msg_body = msg.message
                 # Дату конвертим из UTC в unix
@@ -103,6 +99,7 @@ def telegram_grabber():
                 cursor.execute(
                     'insert into posts values (NULL, ?, NULL, ?, ?, ?)', [msg_body, msg_timestamp, channel_name, user_id]
                 )
+                connection.commit()
 
 if __name__=='__main__':
 

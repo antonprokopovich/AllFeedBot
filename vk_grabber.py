@@ -24,7 +24,6 @@ def vk_grabber():
     for user_id, networks in user_infos:
         if user_networks['vk']['subscribed'] != True:
             continue
-
         # Получаем временную метку last_checked
         cursor.execute('select networks from users where user_id = ?', [user_id])
         networks_dict = json.loads(cursor.fetchone()[0])

@@ -15,7 +15,7 @@ SCOPES = ['https://www.googleapis.com/auth/youtube.force-ssl']
 API_SERVICE_NAME = 'youtube'
 API_VERSION = 'v3'
 
-success_url = "agrbot.info:8889/success/"
+success_url = "http://agrbot.info:8889/success/"
 
 connection = sqlite3.connect('bot_db.db')
 cursor = connection.cursor()
@@ -23,11 +23,12 @@ cursor = connection.cursor()
 class MainHandler(tornado.web.RequestHandler):
     def get(self):
         self.write("Hello, world")
-"""
+
 class SuccessHandler(tornado.web.RequestHandler):
     def get(self):
         self.write("Авторизация успешно пройдена.")
-"""
+
+
 class OAuthCallbackYoutubeHandler(tornado.web.RequestHandler):
     def get(self):
         state = self.get_cookie('state')
@@ -79,9 +80,9 @@ class AuthYoutubeHandler(tornado.web.RequestHandler):
 
 class OAuthCallbackVKHandler(tornado.web.RequestHandler):
     def get(self):
-        user_id = self.get_cookie('userid')
+        user_id = self.get_cookie('user_id')
         access_token = self.get_argument('access_token', '')
-        redirect(success_url)
+        #redirect(success_url)
         cursor.execute("insert into oauth_creds (access_token, user_id) values (?, ?)", [access_token, user_id])
         connection.commit()
 
@@ -102,7 +103,7 @@ class AuthVKHandler(tornado.web.RequestHandler):
 def make_app():
     return tornado.web.Application([
         (r"/", MainHandler),
-        #(r"/success/", SuccessHandler),
+        (r"/success/", SuccessHandler),
         (r"/auth/youtube/", AuthYoutubeHandler),
         (r"/oauth2callback/youtube/", OAuthCallbackYoutubeHandler),
         (r"/auth/vk/", AuthVKHandler),
