@@ -1,4 +1,4 @@
-# FeedBot
+# AllFeedBot
 
 Telegram Bot that aggregates your news feed from multiple social networks (currently supports YouTube, VK; Twitter will be available soon) and telegram channels.
 
