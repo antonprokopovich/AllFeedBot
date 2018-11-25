@@ -65,41 +65,59 @@ def quiet_exec(f):
 
 @quiet_exec 
 def telegram_grabber():
+    #client.connect()
     # Составляем список пользователей подписанных хотя бы на один канал.
     user_infos = [
-        (user_id, json.loads(channels)) for user_id, channels in cursor.execute(
-            'select user_id, channels from users where channels is not null and channels != "{}"'
+        (username, json.loads(channels), channel_name) for username, channels, channel_name in cursor.execute(
+            'select username, channels, channel_name from users where channels is not null and channels != "{}"'
         )
     ]
     #print(user_infos)
-    for user_id, channels_dict in user_infos:
+    for username, channels_dict, channel_name in user_infos:
     # Названия каналов и соответствующие им метки last_checked
     # (в них будет id последнего сообщения канала).
-        channel_names_and_timestamps = [
+
+        channels_and_timestamps = [
             (item[0], item[1]['last_checked']) for item in channels_dict.items()
         ]
-        #print(channel_names_and_timestamps)
-        for channel_name, last_checked  in channel_names_and_timestamps:
+        #print(channels_and_timestamps)
+        for channel, last_checked  in channels_and_timestamps:
             # Вступаем клиентом в канал
+            #channel_entity = client.get_entity(channel)
+
             try:
-                client(JoinChannelRequest(channel_name))
+                client(JoinChannelRequest(channel))
             except ValueError:
                 continue
             # Считываем клиентом все новые сообщения из канала.
-            message_objects = client.iter_messages(channel_name, offset_date=last_checked, reverse=True)
-            #print(next(message_objects).message)
-            for msg in message_objects:
-                #print(type(msg))
-                msg_id = msg.id
-                msg_body = msg.message
-                # Дату конвертим из UTC в unix
-                #msg_media = msg.
-                msg_timestamp = int((msg.date.timestamp()))
+            # Возвращает объект класса 'telethon.sync._SyncGen'
+            message_objects = client.iter_messages(channel, offset_date=last_checked, reverse=True)
+            #print(type(next(message_objects)))
+            # Пересылаем юзеру новые сообщения клиентом напрямую
+            # (без сохранения в БД)
+            msg_list = [m for m in message_objects]
+            #print(type(msg_list[0]))
+            if msg_list != []:
+                for msg in message_objects:
+                    #print(type(next(message_objects)))
+                    msg.forward_to(channel_name)
+                    #client.send_message(username, next(message_objects))
+                    """
+                    #msg_id = msg.id
+                    #msg_body = msg.message
+                    # Дату конвертим из UTC в unix
+                    #msg_media = msg.
+                    #msg_timestamp = int((msg.date.timestamp()))
 
-                cursor.execute(
-                    'insert into posts values (NULL, ?, NULL, ?, ?, ?)', [msg_body, msg_timestamp, channel_name, user_id]
-                )
+                    #cursor.execute(
+                    #    'insert into posts values (NULL, ?, NULL, ?, ?, ?)', [msg_body, msg_timestamp, channel, username])
+                    #connection.commit()
+                    """
+                last_msg_timestamp = int(msg_list[-1].date.timestamp())
+                channels_dict['last_checked'] = last_msg_timestamp
+                cursor.execute('update users set channels = ? where username = ?', [json.dumps(channels_dict), username])
                 connection.commit()
+            return
 
 if __name__=='__main__':
 
@@ -108,3 +126,7 @@ if __name__=='__main__':
         client.disconnect()
         time.sleep(10*60)
 
+"""
+- Как send_message работает через username, если последний может
+повторятся для разных пользователей.
+"""

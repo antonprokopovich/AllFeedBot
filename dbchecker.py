@@ -25,62 +25,69 @@ def quiet_exec(f):
 @quiet_exec 
 def start_checker(bot): # принимает аргумент bot
         # Список всех пользователей.
-        cursor.execute('select * from users')
-        for user_row in cursor:
-            #print(user_row)
-            user_id = user_row[1]
-            networks_dict = json.loads(user_row[2])
-            channels_dict = json.loads(user_row[3])
-            # Список добавленных соц-сетей и временных меток.
-            subs_and_timestamps_networks = [
-            (network, value['last_checked']) for network, value in networks_dict.items() if value['subscribed'] == True
-            ]
-            # Список добавленных телеграм-каналов и временных меток.
-            subs_and_timestamps_channels = [(channel, value['last_checked']) for channel, value in channels_dict.items()]
-            # Объединяем соц-сети и телеграм-каналы (с метками last_checked) в единый список подписок.
-            subs_and_timestamps = subs_and_timestamps_networks + subs_and_timestamps_channels
-            channel_name = user_row[4]
-            print(channel_name)
-
-            for sub, last_checked in subs_and_timestamps:
-                #print(sub, last_checked)
-                # Список новых постов из соц. сети.
-                cursor.execute(
-                    'select * from posts where user_id = ? and network = ? and timestamp > ? order by timestamp asc', 
-                    [user_id, sub, last_checked]
-                    )
-                posts = cursor.fetchall()
-                #print("number of new posts: ", len(posts))
-
-                if posts != []:
-                    # Отправляем ссылку на каждый пост в канал.
-                    for post in posts:
-                        post_link = post[2]
-                        post_body =post[1]
-                        #print(post_body)
-
-                        if post_link != None:
-                            bot.send_message(channel_name, post_link)
-                        else:
-                            bot.send_message(channel_name, post_body)
-                    # Обновляем занчение last_cheked в ячейке networks.
-                    last_post_timestamp = posts[-1][3]
-                    # КОСТЫЛЬ (нужно объеденить networks и channels в одну колонку в БД)
-                    if sub[0] == '@':
-                        channels_dict[sub]['last_checked'] = last_post_timestamp
-                        channels_dict_updated_json = json.dumps(channels_dict)
-                        cursor.execute(
-                            'update users set channels = ? where user_id = ?',
-                            [channels_dict_updated_json, user_id]
+        while True:
+            cursor.execute('select * from users')
+            for user_row in cursor:
+                #print(user_row)
+                user_id = user_row[1]
+                networks_dict = json.loads(user_row[2])
+                channels_dict = json.loads(user_row[3])
+                # Список добавленных соц-сетей и временных меток.
+                subs_and_timestamps_networks = [
+                (network, value['last_checked']) for network, value in networks_dict.items() if value['subscribed'] == True
+                ]
+                """
+                # Список добавленных телеграм-каналов и временных меток.
+                subs_and_timestamps_channels = [(channel, value['last_checked']) for channel, value in channels_dict.items()]
+                # Объединяем соц-сети и телеграм-каналы (с метками last_checked) в единый список подписок.
+                subs_and_timestamps = subs_and_timestamps_networks + subs_and_timestamps_channels
+                """
+                for sub, last_checked in subs_and_timestamps_networks:
+                    #print(sub, last_checked)
+                    # Список новых постов из соц. сети.
+                    cursor.execute(
+                        'select * from posts where user_id = ? and network = ? and timestamp > ? order by timestamp asc', 
+                        [user_id, sub, last_checked]
                         )
+                    posts = cursor.fetchall()
+                    #print("number of new posts: ", len(posts))
 
+                    if posts != []:
+                        # Отправляем ссылку на каждый пост в канал.
+                        for post in posts:
+                            post_link = post[2]
+                            post_body =post[1]
+                            #print(post_body)
+
+                            if post_link != None:
+                                bot.send_message(channel_name, post_link)
+                            else:
+                                try:
+                                    bot.send_message(channel_name, post_body)
+                                except BaseException as e:
+                                    continue
+                        # Обновляем занчение last_cheked в ячейке networks.
+                        last_post_timestamp = posts[-1][3]
+
+                        """
+                        if sub[0] == '@':
+                            channels_dict[sub]['last_checked'] = last_post_timestamp
+                            channels_dict_updated_json = json.dumps(channels_dict)
+                            cursor.execute(
+                                'update users set channels = ? where user_id = ?',
+                                [channels_dict_updated_json, user_id]
+                            )
+                        """
                         networks_dict[sub]['last_checked'] = last_post_timestamp
                         networks_dict_updated_json = json.dumps(networks_dict)
                         cursor.execute(
                             'update users set networks = ? where user_id = ?',
                             [networks_dict_updated_json, user_id]
                         )
-                    connection.commit()
+                        connection.commit()
+                    return
+
+                    time.sleep(10*60)
 
 """
 if __name__ == '__main__':

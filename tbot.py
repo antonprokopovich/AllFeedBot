@@ -16,7 +16,7 @@ from tg_grabber import telegram_grabber
 from dbchecker import start_checker
 
 auth_host = "agrbot.info:8889"
-bot_token = "781241991:AAF8n_sfMKiyNlXJ329-D2nRdrTwOURS6GE"
+bot_token = "738165589:AAFxndvtTXmcZcXaSaP85V2S49ExfZKWCoY"
 tbot = Bot(bot_token)
 
 connection = sqlite3.connect('bot_db.db', check_same_thread=False, timeout=10)
@@ -45,17 +45,18 @@ def bot_start(bot, update):
     # При начале работы с ботом автоматически вызывается команда /start
     # и пользователю присвается user_id, под которым он заносится в БД.
     user_id = update.message.chat.id
-    print(tbot.name)
+    #print(tbot.name)
 
     # Имя или юзернейм пользователя для приветствия.
     fname = update.message.from_user.first_name
+    username = update.message.from_user.username
     if not fname:
-        fname = update.message.from_user.username
+        fname = username
 
     channel_name = "@{}{}".format(user_id, fname)
 
     msg = "Приветствую, {}!".format(fname)
-    msg += "\nСоздайте Телеграм-канал с названием {}," \
+    msg += "\nСоздайте приватный Телеграм-канал с названием {}, " \
     "и добавьте данного бота ({}) в администраторы канала.".format(channel_name, tbot.name)
     msg += "\n\nДля получения дальнейшей справки воспользуйтесь командой /help"
 
@@ -64,7 +65,7 @@ def bot_start(bot, update):
     # Если пользователь повторно воспользовался командой /start,
     # и его данные уже есть в таблице - не меняем их.
     # (IGNORE или REPLACE ?)
-    cursor.execute('INSERT or IGNORE INTO users (user_id, channel_name) VALUES (?, ?)', [user_id, channel_name])
+    cursor.execute('insert or replace into users (user_id, channel_name, username) VALUES (?, ?, ?)', [user_id, channel_name, username])
     connection.commit()
 
 @quiet_exec   

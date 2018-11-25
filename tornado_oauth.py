@@ -22,7 +22,7 @@ cursor = connection.cursor()
 
 class MainHandler(tornado.web.RequestHandler):
     def get(self):
-        self.write("Hello, world")
+        self.write("")
 
 class SuccessHandler(tornado.web.RequestHandler):
     def get(self):
@@ -57,7 +57,10 @@ class OAuthCallbackYoutubeHandler(tornado.web.RequestHandler):
         #self.write("CREDS="+json.dumps(creds_dict, indent=4))
         self.redirect(success_url)
         # сохраняем credentials в БД.
-        cursor.execute('insert into oauth_creds values (NULL, ?, ?, ?, ?, ?)', list(creds_dict.values()))
+        cursor.execute(
+            'insert or replace into oauth_creds values (NULL, ?, ?, ?, ?, ?, ?, ?)',
+            list(creds_dict.values()) + ['youtube', user_id]
+        )
         connection.commit()
 
 
@@ -80,24 +83,37 @@ class AuthYoutubeHandler(tornado.web.RequestHandler):
 
 class OAuthCallbackVKHandler(tornado.web.RequestHandler):
     def get(self):
-        user_id = self.get_cookie('user_id')
+        user_id = self.get_cookie('userid')
         access_token = self.get_argument('access_token', '')
+        if access_token == '':
+            self.write(
+                '<html><head></head><body><script>'
+                'window.location.href = window.location.href.replace("#", "?");'
+                '</script></body></html>'
+            )
+            return
+        print('access_token='+access_token)
+        return
         #redirect(success_url)
-        cursor.execute("insert into oauth_creds (access_token, user_id) values (?, ?)", [access_token, user_id])
+        cursor.execute(
+            "insert or replace into oauth_creds (access_token, network, user_id) values (?, ?)",
+            [access_token, network, user_id]
+        )
         connection.commit()
 
 class AuthVKHandler(tornado.web.RequestHandler):
     def get(self):
         user_id = self.get_argument('userid', '')
         # Параметры запроса для формирования ссылки для авторизации
-        client_id = 6750460 # id приложения FeedBot
+        client_id = 6761766 # id приложения FeedBot
         scope = "".join(['wall', 'friends', 'offline']) # параметр offline дает вечныей токен
-        redirect_uri = "http://oauth.vk.com/blank.html"
+        redirect_uri = "http://{}/oauth2callback/vk/".format(self.request.host)
         # Ссылка авторизации VK на которую будем редиректить ВСЕХ юзеров
         #authorization_url = "https://oauth.vk.com/authorize?redirect_uri=http://oauth.vk.com/blank.html&response_type=token&client_id=6750460&scope=wall,friends,offline&display=page"
         authorization_url = "https://oauth.vk.com/authorize?redirect_uri={}&response_type=token&client_id={}&scope={}&display=page".format(redirect_uri, client_id, scope)
+        self.set_cookie('userid', user_id)
         self.redirect(authorization_url)
-        self.set_cookie('user_id', user_id)
+
 
 
 def make_app():
@@ -107,7 +123,7 @@ def make_app():
         (r"/auth/youtube/", AuthYoutubeHandler),
         (r"/oauth2callback/youtube/", OAuthCallbackYoutubeHandler),
         (r"/auth/vk/", AuthVKHandler),
-        (r"/oauth.vk.com/blank.html/", OAuthCallbackVKHandler)
+        (r"/oauth2callback/vk/", OAuthCallbackVKHandler)
     ])
 
 if __name__ == "__main__":
