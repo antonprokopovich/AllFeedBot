@@ -10,7 +10,7 @@ from telegram.ext import Updater, CommandHandler, ConversationHandler, MessageHa
 from telegram import User, ReplyKeyboardMarkup, Bot
 
 from vk_grabber import vk_grabber
-from youtube_grabber import youtube_grabber
+from yt_grabber import yt_grabber
 from tg_grabber import telegram_grabber
 
 from dbchecker import start_checker

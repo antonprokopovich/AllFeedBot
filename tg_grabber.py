@@ -1,28 +1,4 @@
-"""
-- Создаем телеграм-клиента, который сможет подписываться на каналы,
-отписываться, считывать новые сообщения в каналах, и добавлять их в БД
-- Если юзер добавляет через бота (tbot.py) новый канал, то клиент 
-подписывается на данный канал, если не был уже подписан для других юзеров, 
-заносит в БД информацию о новой подписке юзера и текущее время в качестве
-метки last_checked.
-- Если все юзеры отписались от конкретного канала, клиент тоже
-отписывается от него.(?)
-– Раз в n минут клиент считывает сообщения в каждом канале,
-на который подписан юзер, начиная с id (по тайкоду сложнее) последнего
-сообщения (поста) занесенного в БД. Считанное сообщение разбирается
-на содержимое (текст, медиафайлы и т.п.) и заносится в таблицу posts
-БД.
-– Данный процесс проводится для каждого пользователя. 
 
-    ВОПРОСЫ:
-- ? Добавлять отдельный хэндлер для просмотра списка подписок на каналы,
-чтобы юзер мог посмотреть на какие он уже подписан, и не добавлял/удалял
-их повторно?
-–? Так же клиент может отправлять сообщения используя объект класса Message
-телеграма. Значит если использовать ORM то можно сохранять считаные
-клиентом объекты класса Message в базу, и потом воссоздавать их из базы
-для перессылки юзеру?
-""" 
 import traceback
 import sqlite3
 import json
@@ -76,31 +52,36 @@ def telegram_grabber():
     for username, channels_dict, channel_name in user_infos:
     # Названия каналов и соответствующие им метки last_checked
     # (в них будет id последнего сообщения канала).
-
         channels_and_timestamps = [
             (item[0], item[1]['last_checked']) for item in channels_dict.items()
         ]
         #print(channels_and_timestamps)
+        #channel_entity = client.get_entity(channel_name)
         for channel, last_checked  in channels_and_timestamps:
             # Вступаем клиентом в канал
-            #channel_entity = client.get_entity(channel)
-
             try:
                 client(JoinChannelRequest(channel))
             except ValueError:
                 continue
             # Считываем клиентом все новые сообщения из канала.
             # Возвращает объект класса 'telethon.sync._SyncGen'
-            message_objects = client.iter_messages(channel, offset_date=last_checked, reverse=True)
+            message_objects = client.iter_messages(channel,
+                offset_date=datetime.fromtimestamp(last_checked),
+                reverse=True
+            )
             #print(type(next(message_objects)))
             # Пересылаем юзеру новые сообщения клиентом напрямую
             # (без сохранения в БД)
             msg_list = [m for m in message_objects]
-            #print(type(msg_list[0]))
+            print(len(msg_list))
+            #print(type(msg_list[2]).__name__ == 'Message')
             if msg_list != []:
-                for msg in message_objects:
-                    #print(type(next(message_objects)))
-                    msg.forward_to(channel_name)
+                for msg in msg_list:
+                    # Отправляем объекты класса Message, пропуская объекты
+                    # MessageService, которые являются системными сообщениями телеграма
+                    if type(msg).__name__ == 'Message':
+                        client.send_message(channel_name, msg)
+                        print('message sent')
                     #client.send_message(username, next(message_objects))
                     """
                     #msg_id = msg.id
@@ -114,7 +95,7 @@ def telegram_grabber():
                     #connection.commit()
                     """
                 last_msg_timestamp = int(msg_list[-1].date.timestamp())
-                channels_dict['last_checked'] = last_msg_timestamp
+                channels_dict[channel]['last_checked'] = last_msg_timestamp
                 cursor.execute('update users set channels = ? where username = ?', [json.dumps(channels_dict), username])
                 connection.commit()
             return
@@ -126,7 +107,3 @@ if __name__=='__main__':
         client.disconnect()
         time.sleep(10*60)
 
-"""
-- Как send_message работает через username, если последний может
-повторятся для разных пользователей.
-"""

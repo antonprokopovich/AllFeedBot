@@ -205,7 +205,7 @@ def uploads_playlist_videos_ids_and_dates(service, **kwargs):
 
     return videos_ids_and_dates
 
-def youtube_grabber():
+def yt_grabber():
     """
     """
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
@@ -298,6 +298,6 @@ def youtube_grabber():
 #"""
 if __name__ == '__main__':
     while True:
-        youtube_grabber()
+        yt_grabber()
         time.sleep(30*60)
 #"""

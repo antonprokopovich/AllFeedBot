@@ -27,11 +27,15 @@ def start_checker(bot): # принимает аргумент bot
         # Список всех пользователей.
         while True:
             cursor.execute('select * from users')
-            for user_row in cursor:
+            user_list = cursor.fetchall()
+            print(user_list)
+            for user_row in user_list:
                 #print(user_row)
                 user_id = user_row[1]
                 networks_dict = json.loads(user_row[2])
                 channels_dict = json.loads(user_row[3])
+                channel_name = user_row[4]
+                print(channel_name)
                 # Список добавленных соц-сетей и временных меток.
                 subs_and_timestamps_networks = [
                 (network, value['last_checked']) for network, value in networks_dict.items() if value['subscribed'] == True
@@ -85,9 +89,7 @@ def start_checker(bot): # принимает аргумент bot
                             [networks_dict_updated_json, user_id]
                         )
                         connection.commit()
-                    return
-
-                    time.sleep(10*60)
+            time.sleep(10*60)
 
 """
 if __name__ == '__main__':
