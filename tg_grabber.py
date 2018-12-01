@@ -17,14 +17,15 @@ cursor = connection.cursor()
 # Данные для создания телеграм-клиента
 api_id = 654585
 api_hash = "85b15b1918e06814c3a052f4d6e44718"
-phone_number = 89852549143
+phone_number = 89263771853
 
 
 # Создаем клиента, от лица которого можно действовать как пользователь телеграма
-client = TelegramClient('session_name', api_id, api_hash)
+client = TelegramClient('session', api_id, api_hash)
 client.connect()
 # Если клиент не авторизован, авторизуем один раз по номеру телефона
 if not client.is_user_authorized():
+    print('[!] Sending code request...')
     client.send_code_request(phone_number)
     me = client.sign_in(phone_number, input('Enter code: '))
 #client.send_message('@n3tw0rk3r', 'Hello World from Telethon!')

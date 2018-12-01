@@ -59,10 +59,11 @@ def refresh_access_token(creds):
     creds.refresh(google.auth.transport.requests.Request())
     return build(API_SERVICE_NAME, API_VERSION, credentials = creds)
 
-def save_creds(creds):
+def save_creds(creds, user_id):
     """
     Сохраняем credentials в БД.
     """
+    network = 'youtube'
     creds_dict = {
         'refresh_token': creds.refresh_token,
         'access_token': creds.token,
@@ -74,7 +75,10 @@ def save_creds(creds):
     with open('creds.json', 'w') as f:
         f.write(json.dumps(creds_dict))
     """
-    cursor.execute('insert into oauth_creds values (NULL, ?, ?, ?, ?, ?)', list(creds_dict.values()))
+    cursor.execute(
+        'insert or replace into oauth_creds values (NULL, ?, ?, ?, ?, ?, ?, ?)',
+        list(creds_dict.values())+[network, user_id]
+    )
     connection.commit()
 
 def load_creds(user_id):
@@ -86,15 +90,17 @@ def load_creds(user_id):
     try:
         # Из БД получаем список из строк формата
         # [access_token, refresh_token, token_uri, client_id, client_secret]
-        cursor.execute('select * from oauth2 where user_id = ?', (user_id,))
-        creds_list = cursor.fetchone()
+        print('[!] Trying to load creds from DB...')
+        cursor.execute('select * from oauth_creds where user_id = ?', (user_id,))
+        creds_list = cursor.fetchone()[1:]
+        print('[!] Credentials info for {}: {}'.format(user_id, creds_list))
         # Создаем объект google.oauth2.credentials.Credentials из списка
         creds = google.oauth2.credentials.Credentials(
             creds_list[0],
             refresh_token=creds_list[1],
             token_uri=creds_list[2],
             client_id=creds_list[3],
-            client_secret=creds_dict[4],
+            client_secret=creds_list[4],
         )
         """
         with open('creds.json', 'r') as f:
@@ -109,11 +115,12 @@ def load_creds(user_id):
                 client_secret=creds_dict['client_secret'],
             )
         """
-        # Если access token в credentials просрочен, то обновляем его
+        # Если access_token в credentials просрочен, то обновляем его
         if creds.expired:
             refresh_access_token(creds)
         return creds
-    except:
+    except BaseException as e:
+        print(e)
         return
 
 def get_authenticated_service(user_id):
@@ -137,7 +144,7 @@ def get_authenticated_service(user_id):
             success_message=_DEFAULT_WEB_SUCCESS_MESSAGE,
             open_browser=True)
         """
-    save_creds(credentials) # сохраняем в файл/БД для будущих запусков
+    #save_creds(credentials, user_id) # сохраняем в файл/БД для будущих запусков
     return build(API_SERVICE_NAME, API_VERSION, credentials = credentials)
 
 def iso_to_unix(time_iso):
@@ -208,6 +215,7 @@ def uploads_playlist_videos_ids_and_dates(service, **kwargs):
 def yt_grabber():
     """
     """
+    print('[!] yt_grabber started...')
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
     # Формируем список id всех пользователей, подписанных на
@@ -217,20 +225,22 @@ def yt_grabber():
             "select user_id, networks from users"
         )
     ]
-
+    #print(user_infos)
     for user_id, networks in user_infos:
         if networks['youtube']['subscribed'] != True:
+            print('Skipping {}...'.format(user_id))
             continue
-
+        print('[!] Getting creds for {}...'.format(user_id))
         service = get_authenticated_service(user_id)
         # Функция get_authenticated_service возвращает None, если юзер еще не
         # авторизовал бота, в этом случае - пропускаем юзера.
         if service is None:
+            print('[!] {} did not go through authorization yet. Skipping...'.format(user_id))
             continue
         # Временная метка последнего YouTube-видео занесенного в базу данных. Далее по
         # ней будем определять до какой записи идут новые, а после какой старые
         # (уже занесенные в базу данных) видео.
-        last_checked = networks_dict['youtube_grabber']['last_checked']
+        last_checked = networks['youtube']['last_checked']
 
         # Получаем список id каналов, на которые подписан пользователь.
         sub_ids_list = my_subscriptions(service,
@@ -271,27 +281,28 @@ def yt_grabber():
         subs_videos_ids_and_dates = sorted(
             subs_videos_ids_and_dates, key=lambda x: x[1]
         )
+        print("[!] There are {} new videos for user {}...".format(len(subs_videos_ids_and_dates), user_id))
 
         # ПАРСИНГ
         # Для каждого видео каждого канала формируем ссылку на него и его
         # таймкод для последующего сохранения в БД.
         for id_and_date in subs_videos_ids_and_dates:
-            video_id, date = channel_list
-            # Переписать user_id
-            user_id = user_id 
+            video_id, date = id_and_date
             network_name = 'youtube'
             video_link = "https://www.youtube.com/watch?v={}".format(video_id)
             timestamp = int(iso_to_unix(date))
+            print('[!] Timestamp: {})'.format(timestamp))
             if timestamp > last_checked:
                 cursor.execute(
                     "insert into posts values (NULL, NULL, ?, ?, ?, ?)",
                     [video_link, timestamp, network_name, user_id]
                 )
+                print("[!] New youtube post added to the database.")
                 connection.commit()
 
 #"""
 if __name__ == '__main__':
     while True:
         yt_grabber()
-        time.sleep(30*60)
+        time.sleep(10*60)
 #"""

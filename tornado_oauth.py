@@ -46,20 +46,27 @@ class OAuthCallbackYoutubeHandler(tornado.web.RequestHandler):
         #     Store user's access and refresh tokens in your data store if
         #     incorporating this code into your real app.
         creds = flow.credentials
+        creds_list = [
+            creds.token, creds.refresh_token, creds.token_uri, creds.client_id, creds.client_secret
+        ]
+        """
         creds_dict = {
-            'refresh_token': creds.refresh_token,
             'access_token': creds.token,
+            'refresh_token': creds.refresh_token,
             'token_uri': creds.token_uri,
             'client_id': creds.client_id,
             'client_secret': creds.client_secret
         }
+        """
+        print('[!] creds from google_auth.flow: {}'.format(creds_list))
+        network = 'youtube'
         #self.write("USER_ID:" + user_id)
         #self.write("CREDS="+json.dumps(creds_dict, indent=4))
         self.redirect(success_url)
         # сохраняем credentials в БД.
         cursor.execute(
             'insert or replace into oauth_creds values (NULL, ?, ?, ?, ?, ?, ?, ?)',
-            list(creds_dict.values()) + ['youtube', user_id]
+            creds_list + [network, user_id]
         )
         connection.commit()
 
@@ -97,7 +104,7 @@ class OAuthCallbackVKHandler(tornado.web.RequestHandler):
                 '</script></body></html>'
             )
             return
-        
+
         cursor.execute(
             "insert or replace into oauth_creds (access_token, network, user_id) values (?, ?)",
             [access_token, network, user_id]

@@ -35,7 +35,7 @@ def start_checker(bot): # принимает аргумент bot
                 networks_dict = json.loads(user_row[2])
                 channels_dict = json.loads(user_row[3])
                 channel_name = user_row[4]
-                #print(channel_name)
+                print("[!] User's channel_name: {}".format(channel_name))
                 # Список добавленных соц-сетей и временных меток.
                 subs_and_timestamps_networks = [
                 (network, value['last_checked']) for network, value in networks_dict.items() if value['subscribed'] == True
