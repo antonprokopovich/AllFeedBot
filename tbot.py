@@ -46,6 +46,7 @@ def bot_start(bot, update):
     # и пользователю присвается user_id, под которым он заносится в БД.
     user_id = update.message.chat.id
     #print(tbot.name)
+    networks_dict = {'vk':{'subscribed': False, 'last_checked': int(time.time())}, 'youtube': {'subscribed': False, 'last_checked': int(time.time())}}
 
     # Имя или юзернейм пользователя для приветствия.
     fname = update.message.from_user.first_name
@@ -65,7 +66,10 @@ def bot_start(bot, update):
     # Если пользователь повторно воспользовался командой /start,
     # и его данные уже есть в таблице - не меняем их.
     # (IGNORE или REPLACE ?)
-    cursor.execute('insert or replace into users (user_id, channel_name, username) VALUES (?, ?, ?)', [user_id, channel_name, username])
+    cursor.execute(
+        'insert or replace into users (user_id, networks, channel_name, username) VALUES (?, ?, ?, ?)',
+        [user_id, json.dumps(networks_dict), channel_name, username]
+    )
     connection.commit()
 
 @quiet_exec   

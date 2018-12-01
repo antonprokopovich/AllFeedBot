@@ -8,6 +8,7 @@ from datetime import datetime
 from telethon.tl.functions.channels import JoinChannelRequest
 from telethon.tl.functions.channels import LeaveChannelRequest
 from telethon.sync import TelegramClient
+from telethon.tl.types import InputPeerChat
 #from telethon.tl.custom import Message
 
 connection = sqlite3.connect('bot_db.db')
@@ -56,7 +57,7 @@ def telegram_grabber():
             (item[0], item[1]['last_checked']) for item in channels_dict.items()
         ]
         #print(channels_and_timestamps)
-        #channel_entity = client.get_entity(channel_name)
+        channel_entity = client.get_entity(channel_name)
         for channel, last_checked  in channels_and_timestamps:
             # Вступаем клиентом в канал
             try:
@@ -73,7 +74,6 @@ def telegram_grabber():
             # Пересылаем юзеру новые сообщения клиентом напрямую
             # (без сохранения в БД)
             msg_list = [m for m in message_objects]
-            print(len(msg_list))
             #print(type(msg_list[2]).__name__ == 'Message')
             if msg_list != []:
                 for msg in msg_list:
@@ -81,7 +81,6 @@ def telegram_grabber():
                     # MessageService, которые являются системными сообщениями телеграма
                     if type(msg).__name__ == 'Message':
                         client.send_message(channel_name, msg)
-                        print('message sent')
                     #client.send_message(username, next(message_objects))
                     """
                     #msg_id = msg.id

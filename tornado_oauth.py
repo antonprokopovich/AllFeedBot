@@ -83,8 +83,13 @@ class AuthYoutubeHandler(tornado.web.RequestHandler):
 
 class OAuthCallbackVKHandler(tornado.web.RequestHandler):
     def get(self):
+        network = "vk"
         user_id = self.get_cookie('userid')
         access_token = self.get_argument('access_token', '')
+        """
+        Если спаршенный токен пуст, значит вк редиректнул и в url была решетка - заменяем
+        решетку на вопрос и редиректимся на себя.
+        """
         if access_token == '':
             self.write(
                 '<html><head></head><body><script>'
@@ -92,9 +97,7 @@ class OAuthCallbackVKHandler(tornado.web.RequestHandler):
                 '</script></body></html>'
             )
             return
-        print('access_token='+access_token)
-        return
-        #redirect(success_url)
+        
         cursor.execute(
             "insert or replace into oauth_creds (access_token, network, user_id) values (?, ?)",
             [access_token, network, user_id]

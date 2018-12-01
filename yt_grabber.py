@@ -217,14 +217,8 @@ def yt_grabber():
             "select user_id, networks from users"
         )
     ]
-    cursor.execute(
-    "SELECT timestamp FROM posts WHERE network = 'youtube' "
-    "ORDER BY timestamp DESC LIMIT 1"
-    )
-    last_timestamp_youtube = cursor.fetchone()[0]
 
     for user_id, networks in user_infos:
-        print(networks)
         if networks['youtube']['subscribed'] != True:
             continue
 

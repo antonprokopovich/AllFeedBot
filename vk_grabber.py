@@ -5,6 +5,7 @@
 """
 import requests
 import time
+import json
 
 import sqlite3
 
@@ -21,7 +22,7 @@ def vk_grabber():
     ]
     # ПАРСИНГ:
     # Для каждого пользователя парсим ссылки на новые видео и сохраняем в БД.
-    for user_id, networks in user_infos:
+    for user_id, user_networks in user_infos:
         if user_networks['vk']['subscribed'] != True:
             continue
         # Получаем временную метку last_checked
@@ -33,7 +34,7 @@ def vk_grabber():
         access_token = cursor.fetchone()[0]
         # Используем временую метку и токен для формирования запроса к api
         url = ("https://api.vk.com/method/newsfeed.get?start_time={}&filters=post,photo&v=4.0&access_token={}"
-        .format(last_timestamp_vk, access_token))
+        .format(last_timestamp, access_token))
         r = requests.get(url)
         data = r.json()
         #print(data)
