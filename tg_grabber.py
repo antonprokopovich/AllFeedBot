@@ -17,7 +17,7 @@ cursor = connection.cursor()
 # Данные для создания телеграм-клиента
 api_id = 654585
 api_hash = "85b15b1918e06814c3a052f4d6e44718"
-phone_number = 89263771853
+phone_number = 89852549143
 
 
 # Создаем клиента, от лица которого можно действовать как пользователь телеграма
@@ -30,6 +30,7 @@ if not client.is_user_authorized():
     me = client.sign_in(phone_number, input('Enter code: '))
 #client.send_message('@n3tw0rk3r', 'Hello World from Telethon!')
 
+
 def quiet_exec(f):
     def wrapper(*args, **kw):
         try:
@@ -41,7 +42,8 @@ def quiet_exec(f):
             print(e)
     return wrapper
 
-@quiet_exec 
+
+@quiet_exec
 def telegram_grabber():
     #client.connect()
     # Составляем список пользователей подписанных хотя бы на один канал.

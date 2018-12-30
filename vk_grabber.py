@@ -12,9 +12,24 @@ import sqlite3
 connection = sqlite3.connect('bot_db.db', check_same_thread=False)
 cursor = connection.cursor()
 
+
+def quiet_exec(f):
+    def wrapper(*args, **kw):
+        try:
+            return f(*args, **kw)
+        except BaseException as e:
+            e = "Error in {}(): {}\n{}".format(
+                f.__name__, str(e), traceback.format_exc()
+            )
+            print(e)
+    return wrapper
+
+
+@quiet_exec
 def vk_grabber():
     # Формируем список id всех пользователей, подписанных на
     # рассылку VK.
+    network_name = 'vk'
     user_infos = [
         (user_id, json.loads(networks)) for user_id, networks in cursor.execute(
             'select user_id, networks from users'
@@ -25,13 +40,21 @@ def vk_grabber():
     for user_id, user_networks in user_infos:
         if user_networks['vk']['subscribed'] != True:
             continue
-        # Получаем временную метку last_checked
+        # Получаем временную метку last_checked.
         cursor.execute('select networks from users where user_id = ?', [user_id])
         networks_dict = json.loads(cursor.fetchone()[0])
         last_timestamp = networks_dict['vk']['last_checked']
-        # Получаем access_token
-        cursor.execute('select access_token from oauth_creds where user_id = ?', [user_id])
-        access_token = cursor.fetchone()[0]
+        # Получаем access_token.
+        cursor.execute(
+            'select access_token from oauth_creds where user_id = ? and network = ?',
+            [user_id, network_name]
+        )
+        creds = cursor.fetchone()
+        # Если токена не в БД, пропускаем юзера.
+        if creds is None:
+            print('[VK_GRABBER] {} did not go through authorization yet. Skipping...'.format(user_id))
+            continue
+        access_token = creds[0]
         # Используем временую метку и токен для формирования запроса к api
         url = ("https://api.vk.com/method/newsfeed.get?start_time={}&filters=post,photo&v=4.0&access_token={}"
         .format(last_timestamp, access_token))
@@ -48,7 +71,10 @@ def vk_grabber():
                 post_id = post.get('post_id', 0)
                 vk_link = "https://vk.com/feed?w=wall{}_{}".format(source_id, post_id)
                 #print("TEXT: {}\nVK_LINK: {}\n------------------------------".format(text, vk_link))
-                cursor.execute("insert into posts values (NULL, ?, ?, ?, ?, ?)", [text, vk_link, timestamp, 'vk', user_id])
+                cursor.execute(
+                    "insert into posts values (NULL, ?, ?, ?, ?, ?)",
+                    [text, vk_link, timestamp, network_name, user_id]
+                )
                 connection.commit()
 #"""
 if __name__ == '__main__':

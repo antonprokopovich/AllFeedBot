@@ -1,3 +1,5 @@
+# -*- coding: utf8 -*-
+
 import json
 import os
 
@@ -49,7 +51,7 @@ class OAuthCallbackYoutubeHandler(tornado.web.RequestHandler):
         creds_list = [
             creds.token, creds.refresh_token, creds.token_uri, creds.client_id, creds.client_secret
         ]
-        """
+
         creds_dict = {
             'access_token': creds.token,
             'refresh_token': creds.refresh_token,
@@ -57,8 +59,8 @@ class OAuthCallbackYoutubeHandler(tornado.web.RequestHandler):
             'client_id': creds.client_id,
             'client_secret': creds.client_secret
         }
-        """
-        print('[!] creds from google_auth.flow: {}'.format(creds_list))
+
+        print('[!] creds from google_auth.flow: {}'.format(creds_dict))
         network = 'youtube'
         #self.write("USER_ID:" + user_id)
         #self.write("CREDS="+json.dumps(creds_dict, indent=4))

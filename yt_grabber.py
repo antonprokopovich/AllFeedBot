@@ -30,8 +30,7 @@ API_VERSION = 'v3'
 
 # Переменная, хранящая данные авторизации.
 credentials = None
-# Переменная, представляющая ресурс (для API запросов).
-service = None
+
 
 def safe_api_request(func):
     """
@@ -43,14 +42,18 @@ def safe_api_request(func):
             # Вызываем функцию с ее аргументами
             return func(*args, **kw)
         except RefreshError:
-            print('[!] Credentials are expired, refreshing...')
+            print('[YT_GRABBER] Credentials are expired, refreshing...')
             # Обвновляем access token и получаем новый объект
             # ресурса (новый service с обновленным токеном)
-            args[0] = refresh_access_token(credentials)
+            user_id = args[1]
+
+            creds = load_creds(user_id)
+            args[0] = refresh_access_token(creds)
             # Еще раз вызываем функцию
             return func(*args, **kw)
 
     return wrapper
+
 
 def refresh_access_token(creds):
     """
@@ -58,6 +61,7 @@ def refresh_access_token(creds):
     """
     creds.refresh(google.auth.transport.requests.Request())
     return build(API_SERVICE_NAME, API_VERSION, credentials = creds)
+
 
 def save_creds(creds, user_id):
     """
@@ -81,6 +85,7 @@ def save_creds(creds, user_id):
     )
     connection.commit()
 
+
 def load_creds(user_id):
     """
     Получаем сохраненные данные и создаем объект 
@@ -88,12 +93,13 @@ def load_creds(user_id):
     Если данных нет, то возвращаем None
     """
     try:
-        # Из БД получаем список из строк формата
+        # Из БД получаем credentials юзера:
         # [access_token, refresh_token, token_uri, client_id, client_secret]
-        print('[!] Trying to load creds from DB...')
+        print('[YT_GRABBER] Trying to load creds from DB...')
         cursor.execute('select * from oauth_creds where user_id = ?', (user_id,))
         creds_list = cursor.fetchone()[1:]
-        print('[!] Credentials info for {}: {}'.format(user_id, creds_list))
+
+        print('[YT_GRABBER] Credentials info for {}: {}'.format(user_id, creds_list))
         # Создаем объект google.oauth2.credentials.Credentials из списка
         creds = google.oauth2.credentials.Credentials(
             creds_list[0],
@@ -123,6 +129,7 @@ def load_creds(user_id):
         print(e)
         return
 
+
 def get_authenticated_service(user_id):
     """
     Получаем ресурс (для API запросов). Для этого используются oauth
@@ -130,34 +137,39 @@ def get_authenticated_service(user_id):
     из БД по Телеграм-id пользователя, который передается аргументом
     функции (user_id).
     """
-    global credentials
+    #global credentials
 
     # Пытаемся получить сохраненные ранее credentials,
     # если не удается - создаем их и сохраняем
     credentials = load_creds(user_id)
     if credentials is None:
         return None
-        """
+    """
         credentials = flow.run_local_server(self, host='localhost',
             port=8888,
             authorization_prompt_message=_DEFAULT_AUTH_PROMPT_MESSAGE,
             success_message=_DEFAULT_WEB_SUCCESS_MESSAGE,
             open_browser=True)
-        """
-    #save_creds(credentials, user_id) # сохраняем в файл/БД для будущих запусков
+    """
+    save_creds(credentials, user_id) # сохраняем в БД для будущих запусков
+
+    # Возвращаем русурс И user_id, чтобы по нему можно было обновлять access_tocken
+    # через декоратор safe_api_request (см. первую функцию).
     return build(API_SERVICE_NAME, API_VERSION, credentials = credentials)
+
 
 def iso_to_unix(time_iso):
     """
-    Функция для перевода временного кода в формате iso (формат
+    Функция для перевода даты в формате iso (формат
     используемый youtube'ом) в формат unix time (формат для нашей БД).
     """
     parsed_t = dp.parse(time_iso)
     unix_time = parsed_t.strftime('%s')
     return unix_time
 
+
 @safe_api_request
-def my_subscriptions(service, **kwargs):
+def my_subscriptions(service, user_id,  **kwargs):
     """
     Функция выполняет get запрос к api методу list() ресурса subscriptions(),
     и берет из ответа id каналов, на которые подписан аутентифицированный
@@ -169,11 +181,11 @@ def my_subscriptions(service, **kwargs):
     subs_ids = [
         item['snippet']["resourceId"]['channelId'] for item in results['items']
     ]
-    #print('ID каналов на которые вы подписаны: {}'.format(", ".join(subs_ids)))
     return subs_ids
 
+
 @safe_api_request
-def channel_uploads_playlist_id(service, **kwargs):
+def channel_uploads_playlist_id(service, user_id, **kwargs):
     """
     Функция возвращает id плейлиста загруженных видео для каждого канала. 
     """
@@ -186,8 +198,9 @@ def channel_uploads_playlist_id(service, **kwargs):
     )
     return uploads_pl_id
 
+
 @safe_api_request
-def uploads_playlist_videos_ids_and_dates(service, **kwargs):
+def uploads_playlist_videos_ids_and_dates(service, user_id, **kwargs):
     """
     Функция возвращает *список кортежей*, состоящих из id и таймкода
     (чтобы сортировать позже) каждого видео загруженного на канал.
@@ -212,30 +225,32 @@ def uploads_playlist_videos_ids_and_dates(service, **kwargs):
 
     return videos_ids_and_dates
 
+
 def yt_grabber():
     """
     """
-    print('[!] yt_grabber started...')
+    print('[YT_GRABBER] yt_grabber started...')
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
-    # Формируем список id всех пользователей, подписанных на
+    # Итерируем по всем пользователям, подписанным на
     # рассылку YouTube.
-    user_infos = [
+    users_data = [
         (user_id, json.loads(networks)) for user_id, networks in cursor.execute(
             "select user_id, networks from users"
         )
     ]
-    #print(user_infos)
-    for user_id, networks in user_infos:
+    # Если не подписан - пропускаем...
+    for user_id, networks in users_data:
         if networks['youtube']['subscribed'] != True:
-            print('Skipping {}...'.format(user_id))
+            print('[YT_GRABBER] Skipping {}...'.format(user_id))
             continue
-        print('[!] Getting creds for {}...'.format(user_id))
+
+        print('[YT_GRABBER] Getting creds for {}...'.format(user_id))
         service = get_authenticated_service(user_id)
         # Функция get_authenticated_service возвращает None, если юзер еще не
         # авторизовал бота, в этом случае - пропускаем юзера.
         if service is None:
-            print('[!] {} did not go through authorization yet. Skipping...'.format(user_id))
+            print('[YT_GRABBER] {} did not go through authorization yet. Skipping...'.format(user_id))
             continue
         # Временная метка последнего YouTube-видео занесенного в базу данных. Далее по
         # ней будем определять до какой записи идут новые, а после какой старые
@@ -243,7 +258,7 @@ def yt_grabber():
         last_checked = networks['youtube']['last_checked']
 
         # Получаем список id каналов, на которые подписан пользователь.
-        sub_ids_list = my_subscriptions(service,
+        sub_ids_list = my_subscriptions(service, user_id,
                 part='snippet',
                 mine=True,
                 maxResults=50
@@ -252,7 +267,7 @@ def yt_grabber():
         # Получаем список из id плейлистов загрузок каждого канала.
         uploads_pl_ids_list = []
         for sub_id in sub_ids_list:
-            uploads_pl_id = channel_uploads_playlist_id(service,
+            uploads_pl_id = channel_uploads_playlist_id(service, user_id,
                 part='contentDetails',
                 id=sub_id,
                 maxResults=50
@@ -264,7 +279,7 @@ def yt_grabber():
         # видео со всех каналов, на которые подписан пользователь).
         subs_videos_ids_and_dates = []
         for uploads_pl_id in uploads_pl_ids_list:
-            videos_ids_and_dates = uploads_playlist_videos_ids_and_dates(service,
+            videos_ids_and_dates = uploads_playlist_videos_ids_and_dates(service, user_id,
                 part='contentDetails',
                 playlistId=uploads_pl_id,
                 maxResults=10
@@ -281,7 +296,7 @@ def yt_grabber():
         subs_videos_ids_and_dates = sorted(
             subs_videos_ids_and_dates, key=lambda x: x[1]
         )
-        print("[!] There are {} new videos for user {}...".format(len(subs_videos_ids_and_dates), user_id))
+        print("[YT_GRABBER] There are {} new videos for user {}...".format(len(subs_videos_ids_and_dates), user_id))
 
         # ПАРСИНГ
         # Для каждого видео каждого канала формируем ссылку на него и его
@@ -291,13 +306,12 @@ def yt_grabber():
             network_name = 'youtube'
             video_link = "https://www.youtube.com/watch?v={}".format(video_id)
             timestamp = int(iso_to_unix(date))
-            print('[!] Timestamp: {})'.format(timestamp))
             if timestamp > last_checked:
                 cursor.execute(
                     "insert into posts values (NULL, NULL, ?, ?, ?, ?)",
                     [video_link, timestamp, network_name, user_id]
                 )
-                print("[!] New youtube post added to the database.")
+                print("[YT_GRABBER] New youtube post added to the database.")
                 connection.commit()
 
 #"""

@@ -8,8 +8,11 @@ import sqlite3
 import json
 import time
 
+from datetime import datetime
+
 connection = sqlite3.connect('bot_db.db', check_same_thread=False)
 cursor = connection.cursor()
+
 
 def quiet_exec(f):
     def wrapper(*args, **kw):
@@ -21,6 +24,7 @@ def quiet_exec(f):
             )
             print(e)
     return wrapper
+
 
 @quiet_exec 
 def start_checker(bot): # принимает аргумент bot
@@ -35,10 +39,10 @@ def start_checker(bot): # принимает аргумент bot
                 networks_dict = json.loads(user_row[2])
                 channels_dict = json.loads(user_row[3])
                 channel_name = user_row[4]
-                print("[!] User's channel_name: {}".format(channel_name))
+                print("[DBCHECKER] User's channel_name: {}".format(channel_name))
                 # Список добавленных соц-сетей и временных меток.
                 subs_and_timestamps_networks = [
-                (network, value['last_checked']) for network, value in networks_dict.items() if value['subscribed'] == True
+                    (network, value['last_checked']) for network, value in networks_dict.items() if value['subscribed'] == True
                 ]
                 """
                 # Список добавленных телеграм-каналов и временных меток.
@@ -54,7 +58,7 @@ def start_checker(bot): # принимает аргумент bot
                         [user_id, sub, last_checked]
                         )
                     posts = cursor.fetchall()
-                    #print("number of new posts: ", len(posts))
+                    print("[DBCHECKER] Number of new {} posts since {}: ".format(sub.upper(), datetime.fromtimestamp(last_checked)), len(posts))
 
                     if posts != []:
                         # Отправляем ссылку на каждый пост в канал.
@@ -65,9 +69,11 @@ def start_checker(bot): # принимает аргумент bot
 
                             if post_link != None:
                                 bot.send_message(channel_name, post_link)
+                                print('[!] A post link was sent...')
                             else:
                                 try:
                                     bot.send_message(channel_name, post_body)
+                                    print('[!] A post body was sent...')
                                 except BaseException as e:
                                     continue
                         # Обновляем занчение last_cheked в ячейке networks.
