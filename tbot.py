@@ -18,6 +18,17 @@ connection = sqlite3.connect('bot_db.db', check_same_thread=False, timeout=10)
 cursor = connection.cursor()
  
 all_networks = ["VK", "YouTube"]
+
+# Флаг для перехода в режим удаления
+# или добавления соц. сетей, чтобы хэндлер choice_handling(),
+# обрабатывающий сообщение с название соц. сети, определял
+# удалять или добавлять его в соответствии с текущем режимом.
+adding = False
+
+# Флаг перехода в режим оплаты премиум-подписки,
+# чтобы хэндлер choice_hangling() считал название
+# типа выбранной подписки и отправил форму для оплаты
+paying = False
  
  
 def quiet_exec(f):
@@ -90,19 +101,24 @@ def bot_add_channel(bot, update, args):
     user_id = update.message.chat.id
  
     # Получаем из БД список каналов на которые юзер уже подписан
-    cursor.execute('select channels from users where user_id = ?', [json.dumps(user_id)])
+    cursor.execute(
+        'select channels from users where user_id = ?', [json.dumps(user_id)]
+        )
     channels_dict = json.loads(cursor.fetchone()[0])
     channels_list =[channel for channel in channels_dict.keys()]
- 
-    channel_name = ''.join(args)
- 
-    if channel_name[0] != '@':
-        msg = "Название канала должно начинаться с символа '@'."
-        msg += "\nПопробуйте еще раз."
-    elif channel_name in channels_list:
-        msg = "Вы уже добавляли данный канал."
+
+    if args is None:
+        msg = "Вы не указали имя_канала."
     else:
-        msg = "Канал {} добавлен в вашу рассылку.".format(channel_name)
+        channel_name = ''.join(args)
+     
+        if channel_name[0] != '@':
+            msg = "Название канала должно начинаться с символа '@'."
+            msg += "\nПопробуйте еще раз."
+        elif channel_name in channels_list:
+            msg = "Вы уже добавляли данный канал."
+        else:
+            msg = "Канал {} добавлен в вашу рассылку.".format(channel_name)
  
     update.message.reply_text(msg)
  
@@ -112,11 +128,6 @@ def bot_add_channel(bot, update, args):
     connection.commit()
  
  
-# Флаг, который будет использоваться для перехода в режим удаления
-# или добавления соц. сетей, чтобы хэндлер choice_handling(),
-# обрабатывающий сообщение с название соц. сети, определял
-# удалять или добавлять его в соответствии текущем режимом.
-adding = False
 @quiet_exec
 def bot_add_network(bot, update):
     """ Хэндлер обрабатывающий команду /add и предоставляющий
@@ -144,7 +155,7 @@ def bot_add_network(bot, update):
     # дгуру: добавляя элемент в один из них, мы убираем его из дургого,
     # и наоборот.
     networks_to_add = [
-    network for network in all_networks if network.lower() not in user_networks_list
+        network for network in all_networks if network.lower() not in user_networks_list
     ]
     #print("networks_to_add = {}".format(networks_to_add))
     #print(networks_to_add == [])
@@ -190,16 +201,17 @@ def bot_del_network(bot, update):
 @quiet_exec
 def choice_handling(bot, update):
     """Хэндлер срабатывающий после того, как пользователь выбрал сеть
-    для добавления/удаления, и обновляющий список рассылок networks в БД.
+    для добавления/удаления или план безлимитной подписки.
     """
     global adding
+    global paying
  
     user_id = update.message.chat.id
     chosen_network_uppercase = update.message.text
     chosen_network = chosen_network_uppercase.lower()
  
+    # Если добавляем сеть
     if adding:
-        # Если добавляем сеть.
         cursor.execute(
             'select networks from users where user_id = ?',[user_id]
         )
@@ -226,8 +238,8 @@ def choice_handling(bot, update):
         adding = False
         update.message.reply_text(msg)
  
-    else:
-        # Если удаляем сеть.
+    # Если удаляем сеть
+    elif not adding and not paying:
         cursor.execute(
             'select networks from users where user_id = ?', [user_id]
         )
@@ -243,28 +255,54 @@ def choice_handling(bot, update):
         msg = "Сеть {} удалена из вашей рассылки.".format(chosen_network_uppercase)
         msg += "\nДля удаления других сетей, повторно воспользуйтесь командой /del"
         update.message.reply_text(msg)
+
+    # Если оформляем платную подписку
+    else:
+        chosen_plan = update.message.text
+        # TO DO: указывать дату начала и окончания подписки.
+        if chosen_plan == "Месяц":
+            title = "Премиум-подписка на месяц."
+            price = 99
+        elif chosen_plan == "Год":
+            title = "Премиум-подписка на год."
+            price = 499
+        else:
+            title = "Безлимитная премиум-подписка."
+            price = 5999
+
+        chat_id = update.message.chat.id
+        description = "Прозволяет добавлять неограниченное число каналов."
+        payload = "Custom-payload"
+     
+        provider_token = "381764678:TEST:7948"
+        start_parameter = 'sub-payment'
+     
+        currency = "RUB"
+        # Цены в целых значениях минимальных единиц валюты (копейки).
+        prices = [
+            LabeledPrice("Подписка на месяц.", price * 100),
+        ]
+     
+        bot.sendInvoice(chat_id, title, description,
+                        payload, provider_token, start_parameter,
+                        currency, prices)
+        paying = False
+
+@quiet_exec
+def bot_payment(bot, update):
+    """Хэндлер запроса на оплату премиум-подписки.
+    Предлагает выбор из доступных тарифов."""
+    global paying
+    paying = True
+
+    msg = "Выберите тарифный план подписки:"
+    reply_keyboard = [["Месяц\n99.00 RUB", "Год\n499.00 RUB", "Безлимит\n5999.00 RUB"]]
+    markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
+
+    update.message.reply_text(msg, reply_markup=markup)
+    
  
-def bot_payment(bot, update, args):
-    """Хэндлер запроса на оплату полной подписки.
-    Формирует сообщение-счет и отправляет юзеру."""
-    chat_id = update.message.chat.id
-    title = "Full subscription"
-    description = "Full subscription allows user to add unlimited amount of channels."
-    payload = "Custom-payload"
- 
-    provider_token = "PROVIDER_TOKEN"
-    start_parameter = 'sub-payment'
- 
-    currency = "RUR"
-    price = 299 # Цена в рублях
-    # Цена в целых значениях минимальных единиц валюты (копейки)
-    prices = [LabeledPrice("Full subscription", price*100)]
- 
-    bot.sendInvoice(chat_id, title, description,
-                    payload, provider_token, start_parameter,
-                    currency, prices)
- 
-def precheckout_callback(bot, update, args):
+def precheckout_callback(bot, update):
     """Хэндлер проверяет корректность данных
     перед осуществлением оплаты"""
     query = update.pre_checkout_query
@@ -275,7 +313,7 @@ def precheckout_callback(bot, update, args):
     else:
         bot.answer_pre_checkout_query(pre_checkout_query_id=query.id, ok=True)
  
-def successful_payment(bot, update, args):
+def successful_payment(bot, update):
     update.message.reply_text("Оплата прошла успешно!")
  
 def add_filter(bot, update, args):
