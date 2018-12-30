@@ -3,15 +3,10 @@ from _thread import start_new_thread
 import traceback
 import json
 import time
-
 import sqlite3
 
-from telegram.ext import Updater, CommandHandler, ConversationHandler, MessageHandler, Filters
-from telegram import User, ReplyKeyboardMarkup, Bot
-
-from vk_grabber import vk_grabber
-from yt_grabber import yt_grabber
-from tg_grabber import telegram_grabber
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, PreCheckoutQueryHandler
+from telegram import User, ReplyKeyboardMarkup, Bot, LabeledPrice
 
 from dbchecker import start_checker
 
@@ -81,7 +76,8 @@ def bot_help(bot, update):
     "/help – получить справку.\n",
     "/add – добавить социальную сеть.",
     "/del – удалить социальную сеть.",
-    "/add_channel @имя_канала – добавить Телеграм-канал",
+    "/add_channel @имя_канала – добавить Телеграм-канал.",
+    "/premium – снять ограничение на количество каналов."
     ]
     update.message.reply_text("\n".join(commands))
 
@@ -114,10 +110,6 @@ def bot_add_channel(bot, update, args):
     channels_dict[channel_name] = {'last_checked': int(time.time())}
     cursor.execute('update users set channels = ? where user_id = ?', [json.dumps(channels_dict), user_id])
     connection.commit()
-
-
-def bot_del_channel(bot, update, args):
-    pass
 
 
 # Флаг, который будет использоваться для перехода в режим удаления
@@ -168,7 +160,7 @@ def bot_add_network(bot, update):
 
 @quiet_exec
 def bot_del_network(bot, update):
-    """Обрабатывает команду /del и предоставляющий
+    """Хэндлер брабатывает команду /del и предоставляющий
     пользователю варианты доступных для добавления социальных сетей."""
     global adding
     adding = False
@@ -252,31 +244,63 @@ def choice_handling(bot, update):
         msg += "\nДля удаления других сетей, повторно воспользуйтесь командой /del"
         update.message.reply_text(msg)
 
+def bot_payment(bot, update, args):
+    """Хэндлер запроса на оплату полной подписки.
+    Формирует сообщение-счет и отправляет юзеру."""
+    chat_id = update.message.chat.id
+    title = "Full subscription"
+    description = "Full subscription allows user to add unlimited amount of channels."
+    payload = "Custom-payload"
+
+    provider_token = "PROVIDER_TOKEN"
+    start_parameter = 'sub-payment'
+
+    currency = "RUR"
+    price = 299 # Цена в рублях
+    # Цена в целых значениях минимальных единиц валюты (копейки)
+    prices = [LabeledPrice("Full subscription", price*100)]
+
+    bot.sendInvoice(chat_id, title, description,
+                    payload, provider_token, start_parameter,
+                    currency, prices)
+
+def precheckout_callback(bot, update, args):
+    """Хэндлер проверяет корректность данных
+    перед осуществлением оплаты"""
+    query = update.pre_checkout_query
+    if query.invoice_payload != "Custom-payload":
+        # Ответ на ошибку при оплате
+        bot.answer_pre_checkout_query(pre_checkout_query_id=query.id, ok=False,
+                                      error_message="Что-то пошло не так...")
+    else:
+        bot.answer_pre_checkout_query(pre_checkout_query_id=query.id, ok=True)
+
+def successful_payment(bot, update, args):
+    update.message.reply_text("Оплата прошла успешно!")
+
 def add_filter(bot, update, args):
     pass
 
-
 if __name__ == "__main__":
-    # В отдельных потоках запускаем чеккер БД и граббер ВК.
-    #start_new_thread(vk_grabber, ())
-    #start_new_thread(youtube_grabber, ())
 
     start_new_thread(start_checker, (tbot,))
 
     updater = Updater(bot_token)
 
+    updater.dispatcher.add_handler(CommandHandler("start", bot_start))
     updater.dispatcher.add_handler(CommandHandler("help", bot_help))
     updater.dispatcher.add_handler(CommandHandler("add_channel", bot_add_channel, pass_args=True))
     updater.dispatcher.add_handler(CommandHandler("add", bot_add_network))
     updater.dispatcher.add_handler(CommandHandler("del", bot_del_network))
-    updater.dispatcher.add_handler(CommandHandler("start", bot_start))
+    updater.dispatcher.add_handler((CommandHandler("premium", bot_payment)))
+    updater.dispatcher.add_handler((PreCheckoutQueryHandler(precheckout_callback)))
     updater.dispatcher.add_handler(MessageHandler(Filters.text, choice_handling))
+
 
     updater.start_polling()
     updater.idle()
 
 """
-- Проверить запись значения networks в БД в choise_handling()
 
 """
 
