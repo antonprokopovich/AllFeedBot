@@ -4,17 +4,13 @@ import traceback
 import json
 import time
 import sqlite3
-<<<<<<< HEAD
  
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, PreCheckoutQueryHandler
 from telegram import User, ReplyKeyboardMarkup, Bot, LabeledPrice
- 
-=======
+
 
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, PreCheckoutQueryHandler
 from telegram import User, ReplyKeyboardMarkup, Bot, LabeledPrice
-
->>>>>>> 91bc959a90fbaf01eb9f96a82192c64fd1224d39
 from dbchecker import start_checker
  
 auth_host = "agrbot.info:8889"
@@ -31,11 +27,6 @@ all_networks = ["VK", "YouTube"]
 # обрабатывающий сообщение с название соц. сети, определял
 # удалять или добавлять его в соответствии с текущем режимом.
 adding = False
-
-# Флаг перехода в режим оплаты премиум-подписки,
-# чтобы хэндлер choice_hangling() считал название
-# типа выбранной подписки и отправил форму для оплаты
-paying = False
  
  
 def quiet_exec(f):
@@ -133,10 +124,6 @@ def bot_add_channel(bot, update, args):
     channels_dict[channel_name] = {'last_checked': int(time.time())}
     cursor.execute('update users set channels = ? where user_id = ?', [json.dumps(channels_dict), user_id])
     connection.commit()
-<<<<<<< HEAD
- 
- 
-=======
 
 
 # Флаг, который будет использоваться для перехода в режим удаления
@@ -144,7 +131,6 @@ def bot_add_channel(bot, update, args):
 # обрабатывающий сообщение с название соц. сети, определял
 # удалять или добавлять его в соответствии текущем режимом.
 adding = False
->>>>>>> 91bc959a90fbaf01eb9f96a82192c64fd1224d39
 @quiet_exec
 def bot_add_network(bot, update):
     """ Хэндлер обрабатывающий команду /add и предоставляющий
@@ -221,7 +207,6 @@ def choice_handling(bot, update):
     для добавления/удаления или план безлимитной подписки.
     """
     global adding
-    global paying
  
     user_id = update.message.chat.id
     chosen_network_uppercase = update.message.text
@@ -256,7 +241,7 @@ def choice_handling(bot, update):
         update.message.reply_text(msg)
  
     # Если удаляем сеть
-    elif not adding and not paying:
+    else:
         cursor.execute(
             'select networks from users where user_id = ?', [user_id]
         )
@@ -273,65 +258,22 @@ def choice_handling(bot, update):
         msg += "\nДля удаления других сетей, повторно воспользуйтесь командой /del"
         update.message.reply_text(msg)
 
-<<<<<<< HEAD
-    # Если оформляем платную подписку
-    else:
-        chosen_plan = update.message.text
-        # TO DO: указывать дату начала и окончания подписки.
-        if chosen_plan == "Месяц":
-            title = "Премиум-подписка на месяц."
-            price = 99
-        elif chosen_plan == "Год":
-            title = "Премиум-подписка на год."
-            price = 499
-        else:
-            title = "Безлимитная премиум-подписка."
-            price = 5999
-
-        chat_id = update.message.chat.id
-        description = "Прозволяет добавлять неограниченное число каналов."
-        payload = "Custom-payload"
-     
-        provider_token = "381764678:TEST:7948"
-        start_parameter = 'sub-payment'
-     
-        currency = "RUB"
-        # Цены в целых значениях минимальных единиц валюты (копейки).
-        prices = [
-            LabeledPrice("Подписка на месяц.", price * 100),
-        ]
-     
-        bot.sendInvoice(chat_id, title, description,
-                        payload, provider_token, start_parameter,
-                        currency, prices)
-        paying = False
-
 @quiet_exec
-def bot_payment(bot, update):
-    """Хэндлер запроса на оплату премиум-подписки.
-    Предлагает выбор из доступных тарифов."""
-    global paying
-    paying = True
-
-    msg = "Выберите тарифный план подписки:"
-    reply_keyboard = [["Месяц\n99.00 RUB", "Год\n499.00 RUB", "Безлимит\n5999.00 RUB"]]
-    markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
-=======
 def bot_payment(bot, update, args):
     """Хэндлер запроса на оплату полной подписки.
     Формирует сообщение-счет и отправляет юзеру."""
     chat_id = update.message.chat.id
-    title = "Full subscription"
-    description = "Full subscription allows user to add unlimited amount of channels."
+    title = "Безлимитная подписка на год"
+    description = "Безлимитная подписка позволяет добавлять неограниченное число каналов."
     payload = "Custom-payload"
 
-    provider_token = "PROVIDER_TOKEN"
+    provider_token = "381764678:TEST:7948"
     start_parameter = 'sub-payment'
 
-    currency = "RUR"
-    price = 299 # Цена в рублях
-    # Цена в целых значениях минимальных единиц валюты (копейки)
-    prices = [LabeledPrice("Full subscription", price*100)]
+    price = 999
+    currency = "RUB"
+    # Цены в целых значениях минимальных единиц валюты (копейки).
+    prices = [LabeledPrice("Подписка на год.", price * 100)]
 
     bot.sendInvoice(chat_id, title, description,
                     payload, provider_token, start_parameter,
@@ -353,40 +295,13 @@ def successful_payment(bot, update, args):
 
 def add_filter(bot, update, args):
     pass
-
-if __name__ == "__main__":
->>>>>>> 91bc959a90fbaf01eb9f96a82192c64fd1224d39
-
-    update.message.reply_text(msg, reply_markup=markup)
-    
- 
-def precheckout_callback(bot, update):
-    """Хэндлер проверяет корректность данных
-    перед осуществлением оплаты"""
-    query = update.pre_checkout_query
-    if query.invoice_payload != "Custom-payload":
-        # Ответ на ошибку при оплате
-        bot.answer_pre_checkout_query(pre_checkout_query_id=query.id, ok=False,
-                                      error_message="Что-то пошло не так...")
-    else:
-        bot.answer_pre_checkout_query(pre_checkout_query_id=query.id, ok=True)
- 
-def successful_payment(bot, update):
-    update.message.reply_text("Оплата прошла успешно!")
- 
-def add_filter(bot, update, args):
-    pass
  
 if __name__ == "__main__":
  
     start_new_thread(start_checker, (tbot,))
  
     updater = Updater(bot_token)
-<<<<<<< HEAD
- 
-=======
 
->>>>>>> 91bc959a90fbaf01eb9f96a82192c64fd1224d39
     updater.dispatcher.add_handler(CommandHandler("start", bot_start))
     updater.dispatcher.add_handler(CommandHandler("help", bot_help))
     updater.dispatcher.add_handler(CommandHandler("add_channel", bot_add_channel, pass_args=True))
@@ -395,13 +310,7 @@ if __name__ == "__main__":
     updater.dispatcher.add_handler((CommandHandler("premium", bot_payment)))
     updater.dispatcher.add_handler((PreCheckoutQueryHandler(precheckout_callback)))
     updater.dispatcher.add_handler(MessageHandler(Filters.text, choice_handling))
-<<<<<<< HEAD
- 
- 
-=======
 
-
->>>>>>> 91bc959a90fbaf01eb9f96a82192c64fd1224d39
     updater.start_polling()
     updater.idle()
 
